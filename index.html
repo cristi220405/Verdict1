@@ -51,9 +51,17 @@
   .scanhead h1{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:26px;line-height:1.15;letter-spacing:-.02em;margin:0 0 6px}
   .scanhead p{color:var(--ink-soft);font-size:14px;margin:0 0 18px;max-width:34ch}
 
-  #reader{width:100%;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);display:none;background:#0d130f}
+  #reader{width:100%;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);display:none;background:#0d130f;position:relative;overflow:hidden}
   #reader.on{display:block}
-  #reader video{display:block;width:100%!important;height:auto!important}
+  #reader video{display:block;width:100%;height:auto;max-height:60vh;object-fit:cover;background:#0d130f}
+  #readerFallback{width:100%}
+  #readerFallback video{display:block;width:100%!important;height:auto!important}
+  .scanguide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .scanguide span{width:78%;max-width:320px;height:34%;max-height:150px;border-radius:14px;box-shadow:0 0 0 3px rgba(255,255,255,.9),0 0 0 2000px rgba(13,19,15,.28);}
+  .scanhelp{position:absolute;left:0;right:0;top:12px;text-align:center;color:#fff;font-size:12px;font-weight:500;text-shadow:0 1px 4px rgba(0,0,0,.6);pointer-events:none;padding:0 16px}
+  .zoomctl{position:absolute;left:14px;right:14px;bottom:14px;display:flex;align-items:center;gap:10px;background:rgba(13,19,15,.55);backdrop-filter:blur(6px);border-radius:999px;padding:8px 14px}
+  .zoomctl svg{width:16px;height:16px;color:#fff;flex:none}
+  .zoomctl input[type=range]{flex:1;accent-color:#fff;height:3px}
 
   .controls{padding:16px 22px 22px;display:flex;flex-direction:column;gap:12px}
   .field{display:flex;gap:8px}
@@ -241,7 +249,16 @@
       <p>Point your camera at a barcode, or type it in. Verdict scores the product 0–100 on nutrition, additives, and organic — and tells you why.</p>
     </div>
 
-    <div id="reader"></div>
+    <div id="reader">
+      <video id="cam" playsinline muted autoplay></video>
+      <div class="scanguide" id="scanguide"><span></span></div>
+      <div class="scanhelp" id="scanhelp">Fill the frame with the barcode · hold steady</div>
+      <div class="zoomctl" id="zoomCtl" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M8 11h6"/></svg>
+        <input type="range" id="zoom" min="1" max="5" step="0.1" aria-label="Camera zoom">
+      </div>
+      <div id="readerFallback"></div>
+    </div>
 
     <div class="controls">
       <button class="btn wide" id="scanBtn">
@@ -880,7 +897,7 @@ $("#clearSwap").onclick=()=>{saveSwaps([]);renderSwaps();};
 renderSwaps();
 
 /* ---------- camera scanner ---------- */
-let scanner=null, scanning=false;
+let scanner=null, scanning=false, detector=null, rafId=null, stream=null, track=null;
 const scanBtn=$("#scanBtn"), scanLabel=$("#scanLabel"), reader=$("#reader");
 scanBtn.onclick=async()=>{ scanning ? stopScanner() : startScanner(); };
 
@@ -891,7 +908,7 @@ function showCamNote(kind){
     load:`<h4>${svg}Scanner didn't load</h4><p>The barcode library needs an internet connection to load from the CDN. Once it's cached, it works offline. Meanwhile, <b>manual entry and the pantry work fine.</b></p>`,
     insecure:`<h4>${svg}Camera needs a secure address</h4>
       <p>Browsers only allow camera access over <b>https://</b> or <b>localhost</b>. This preview — and the file opened directly (a <code>file://</code> address) — don't qualify, so the camera is blocked.</p>
-      <p>To scan for real, serve the file: on a computer, run <code>python3 -m http.server</code> in the file's folder and open <code>http://localhost:8000/verdict.html</code>. For your phone, drop the file on a free host like <b>Netlify Drop</b> and open the https link. Manual entry and the pantry work everywhere.</p>`,
+      <p>To scan for real, serve the file: on a computer, run <code>python3 -m http.server</code> in the file's folder and open <code>http://localhost:8000/</code>. For your phone, drop the file on a free host like <b>Netlify Drop</b> or push it to <b>GitHub Pages</b> and open the https link. Manual entry and the pantry work everywhere.</p>`,
     denied:`<h4>${svg}Camera permission was blocked</h4><p>Your browser denied camera access for this page. Allow the camera in the address-bar/site settings and tap Scan again — or use manual entry below.</p>`,
     nocam:`<h4>${svg}No camera found</h4><p>This device didn't report a usable camera. Type a barcode or tap a pantry item instead.</p>`
   }[kind];
@@ -901,29 +918,106 @@ function showCamNote(kind){
 
 async function startScanner(){
   camNote.hidden=true;
-  if(typeof Html5Qrcode==="undefined"){ showCamNote("load"); return; }
   if(!window.isSecureContext || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
     showCamNote("insecure"); return;
   }
   reader.classList.add("on"); scanLabel.textContent="Stop camera"; scanning=true;
-  scanner=new Html5Qrcode("reader",{formatsToSupport:[
-    Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,
-    Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,
-    Html5QrcodeSupportedFormats.CODE_128
-  ]});
   try{
-    await scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:150}},
-      txt=>{stopScanner();lookup(txt);},()=>{});
-  }catch(err){
-    stopScanner();
-    const e=((err&&(err.name+" "+err.message))||"").toLowerCase();
-    if(/notallowed|permission|denied/.test(e)) showCamNote("denied");
-    else if(/notfound|nodevices|no camera|overconstrained/.test(e)) showCamNote("nocam");
-    else showCamNote("insecure");
-  }
+    if("BarcodeDetector" in window){
+      const supported = await BarcodeDetector.getSupportedFormats();
+      const want = ["ean_13","ean_8","upc_a","upc_e","code_128"].filter(f=>supported.includes(f));
+      detector = new BarcodeDetector(want.length?{formats:want}:undefined);
+      await startNative();
+    } else {
+      await startFallback();
+    }
+  }catch(err){ handleCamError(err); }
 }
+
+async function startNative(){
+  document.getElementById("readerFallback").style.display="none";
+  const cam=document.getElementById("cam");
+  cam.style.display=""; document.getElementById("scanguide").style.display=""; document.getElementById("scanhelp").style.display="";
+  // high-res rear camera — resolution is what makes 1D barcodes readable
+  stream = await navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080} },
+    audio:false
+  });
+  cam.srcObject=stream; await cam.play();
+  track = stream.getVideoTracks()[0];
+  try{
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    const adv=[];
+    if(caps.focusMode && caps.focusMode.includes("continuous")) adv.push({focusMode:"continuous"});
+    if(adv.length) await track.applyConstraints({advanced:adv});
+    setupZoom(caps);
+  }catch(e){}
+  scanLoop();
+}
+
+function scanLoop(){
+  rafId = requestAnimationFrame(scanLoop);
+  const cam=document.getElementById("cam");
+  if(!detector || !cam || cam.readyState<2 || scanLoop._busy) return;
+  scanLoop._busy=true;
+  detector.detect(cam).then(codes=>{
+    scanLoop._busy=false;
+    if(codes && codes.length){
+      const raw=(codes[0].rawValue||"").replace(/\D/g,"");
+      if(raw.length>=8){ if(navigator.vibrate)navigator.vibrate(40); stopScanner(); lookup(raw); }
+    }
+  }).catch(()=>{ scanLoop._busy=false; });
+}
+
+function setupZoom(caps){
+  const wrap=document.getElementById("zoomCtl"), slider=document.getElementById("zoom");
+  if(caps && caps.zoom && caps.zoom.max>caps.zoom.min){
+    slider.min=caps.zoom.min; slider.max=caps.zoom.max; slider.step=caps.zoom.step||0.1;
+    // many phones open the 0.5x ultra-wide by default — nudge to ~1x so barcodes fill the frame
+    const start=Math.min(caps.zoom.max, Math.max(caps.zoom.min, 1));
+    slider.value=start;
+    track.applyConstraints({advanced:[{zoom:parseFloat(start)}]}).catch(()=>{});
+    slider.oninput=()=>track.applyConstraints({advanced:[{zoom:parseFloat(slider.value)}]}).catch(()=>{});
+    wrap.hidden=false;
+  } else { wrap.hidden=true; }
+}
+
+async function startFallback(){
+  document.getElementById("cam").style.display="none";
+  document.getElementById("scanguide").style.display="none";
+  document.getElementById("zoomCtl").hidden=true;
+  document.getElementById("scanhelp").style.display="";
+  const fb=document.getElementById("readerFallback"); fb.style.display="";
+  if(typeof Html5Qrcode==="undefined"){ showCamNote("load"); stopScanner(); return; }
+  scanner=new Html5Qrcode("readerFallback",{
+    formatsToSupport:[
+      Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,
+      Html5QrcodeSupportedFormats.CODE_128
+    ],
+    experimentalFeatures:{useBarCodeDetectorIfSupported:true}
+  });
+  await scanner.start(
+    { facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080}, advanced:[{focusMode:"continuous"}] },
+    { fps:15, disableFlip:true, qrbox:(w)=>{const bw=Math.min(w*0.85,340);return {width:bw,height:Math.max(150,Math.round(bw*0.55))};} },
+    txt=>{ stopScanner(); lookup(txt); }, ()=>{}
+  );
+}
+
+function handleCamError(err){
+  stopScanner();
+  const e=((err&&(err.name+" "+err.message))||"").toLowerCase();
+  if(/notallowed|permission|denied/.test(e)) showCamNote("denied");
+  else if(/notfound|nodevices|no camera|overconstrained|notreadable/.test(e)) showCamNote("nocam");
+  else showCamNote("insecure");
+}
+
 function stopScanner(){
   scanLabel.textContent="Scan a barcode"; scanning=false; reader.classList.remove("on");
+  document.getElementById("zoomCtl").hidden=true;
+  if(rafId){cancelAnimationFrame(rafId);rafId=null;} scanLoop._busy=false;
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;track=null;}
+  const cam=document.getElementById("cam"); if(cam)cam.srcObject=null;
   if(scanner){scanner.stop().then(()=>scanner.clear()).catch(()=>{});scanner=null;}
 }
 </script>
