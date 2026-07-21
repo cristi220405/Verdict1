@@ -85,6 +85,13 @@
   .zoomctl{position:absolute;left:14px;right:14px;bottom:14px;display:flex;align-items:center;gap:10px;background:rgba(13,19,15,.55);backdrop-filter:blur(6px);border-radius:999px;padding:8px 14px}
   .zoomctl svg{width:16px;height:16px;color:#fff;flex:none}
   .zoomctl input[type=range]{flex:1;accent-color:#fff;height:3px}
+  .switchcam{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:6px;background:rgba(13,19,15,.55);backdrop-filter:blur(6px);color:#fff;border:none;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer}
+  .switchcam svg{width:15px;height:15px}
+  .switchcam:active{transform:scale(.96)}
+  .torchbtn{position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;background:rgba(13,19,15,.55);backdrop-filter:blur(6px);color:#fff;border:none;border-radius:50%;cursor:pointer}
+  .torchbtn svg{width:17px;height:17px}
+  .torchbtn:active{transform:scale(.96)}
+  .torchbtn[aria-pressed="true"]{background:#F5D33B;color:#2a2000}
 
   .controls{padding:16px 22px 22px;display:flex;flex-direction:column;gap:12px}
   .field{display:flex;gap:8px}
@@ -274,6 +281,11 @@
     <p>In Safari, tap the Share button <span class="shareico">&#x2191;</span> then <b>Add to Home Screen</b>. It'll open full-screen like a real app.</p>
   </div>
 
+  <div class="ios-install" id="installHelp" hidden>
+    <button class="ios-x" id="helpX" aria-label="Dismiss">&times;</button>
+    <div id="installHelpBody"></div>
+  </div>
+
   <!-- ============ SCAN PANEL ============ -->
   <div id="home">
   <section class="panel" id="scanPanel">
@@ -287,6 +299,13 @@
       <video id="cam" playsinline muted autoplay></video>
       <div class="scanguide" id="scanguide"><span></span></div>
       <div class="scanhelp" id="scanhelp">Fill the frame with the barcode · hold steady</div>
+      <button class="switchcam" id="switchCam" hidden type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15"/></svg>
+        Lens
+      </button>
+      <button class="torchbtn" id="torchBtn" hidden type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6l-1 7h-4L9 2zM10 9h4v4a2 2 0 01-1 1.7V22h-2v-7.3A2 2 0 0110 13V9z"/></svg>
+      </button>
       <div class="zoomctl" id="zoomCtl" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M8 11h6"/></svg>
         <input type="range" id="zoom" min="1" max="5" step="0.1" aria-label="Camera zoom">
@@ -967,7 +986,7 @@ $("#clearSwap").onclick=()=>{saveSwaps([]);renderSwaps();};
 renderSwaps();
 
 /* ---------- camera scanner ---------- */
-let scanner=null, scanning=false, detector=null, rafId=null, stream=null, track=null;
+let scanner=null, scanning=false, detector=null, rafId=null, stream=null, track=null, cams=[], camIdx=0, torchOn=false;
 const scanBtn=$("#scanBtn"), scanLabel=$("#scanLabel"), reader=$("#reader");
 scanBtn.onclick=async()=>{ scanning ? stopScanner() : startScanner(); };
 
@@ -1006,24 +1025,74 @@ async function startScanner(){
 
 async function startNative(){
   document.getElementById("readerFallback").style.display="none";
+  document.getElementById("cam").style.display="";
+  document.getElementById("scanguide").style.display="";
+  document.getElementById("scanhelp").style.display="";
+  await openStream(null);                 // grant permission on the default rear camera
+  try{
+    cams = await listBackCameras();       // labels are available only after permission
+    if(cams.length){
+      camIdx = 0;
+      const curId = (track && track.getSettings) ? track.getSettings().deviceId : null;
+      const prefId = cams[0].deviceId;
+      if(prefId && prefId!==curId){ await openStream(prefId); }   // move off ultra-wide if needed
+    }
+    document.getElementById("switchCam").hidden = !(cams.length>1);
+  }catch(e){ document.getElementById("switchCam").hidden=true; }
+  scanLoop();
+}
+
+// (re)open a specific camera; deviceId null = default environment lens
+async function openStream(deviceId){
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  const video = deviceId ? {deviceId:{exact:deviceId}} : {facingMode:{ideal:"environment"}};
+  video.width={ideal:1920}; video.height={ideal:1080};
+  stream = await navigator.mediaDevices.getUserMedia({video, audio:false});
   const cam=document.getElementById("cam");
-  cam.style.display=""; document.getElementById("scanguide").style.display=""; document.getElementById("scanhelp").style.display="";
-  // high-res rear camera — resolution is what makes 1D barcodes readable
-  stream = await navigator.mediaDevices.getUserMedia({
-    video:{ facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080} },
-    audio:false
-  });
   cam.srcObject=stream; await cam.play();
   track = stream.getVideoTracks()[0];
   try{
     const caps = track.getCapabilities ? track.getCapabilities() : {};
-    const adv=[];
-    if(caps.focusMode && caps.focusMode.includes("continuous")) adv.push({focusMode:"continuous"});
-    if(adv.length) await track.applyConstraints({advanced:adv});
+    if(caps.focusMode && caps.focusMode.includes("continuous")){
+      await track.applyConstraints({advanced:[{focusMode:"continuous"}]});
+    }
     setupZoom(caps);
+    setupTorch(caps);
   }catch(e){}
-  scanLoop();
 }
+
+function setupTorch(caps){
+  const btn=document.getElementById("torchBtn");
+  torchOn=false; btn.setAttribute("aria-pressed","false");
+  if(caps && caps.torch){ btn.hidden=false; } else { btn.hidden=true; }
+}
+document.getElementById("torchBtn").onclick=async()=>{
+  if(!track) return;
+  torchOn=!torchOn;
+  try{
+    await track.applyConstraints({advanced:[{torch:torchOn}]});
+    document.getElementById("torchBtn").setAttribute("aria-pressed", torchOn?"true":"false");
+  }catch(e){ torchOn=!torchOn; }
+};
+
+// list rear cameras, main lens first (ultra-wide / tele / depth / macro pushed last)
+async function listBackCameras(){
+  const devs = await navigator.mediaDevices.enumerateDevices();
+  const vids = devs.filter(d=>d.kind==="videoinput");
+  let back = vids.filter(d=>/back|rear|environment/i.test(d.label||""));
+  if(!back.length) back = vids;
+  const secondary = /ultra|wide.?angle|0\.5|tele|depth|macro|mono/i;
+  return back.slice().sort((a,b)=>(secondary.test(a.label||"")?1:0)-(secondary.test(b.label||"")?1:0));
+}
+
+document.getElementById("switchCam").onclick = async ()=>{
+  if(!cams.length) return;
+  camIdx = (camIdx+1) % cams.length;
+  const label = (cams[camIdx].label||"").toLowerCase();
+  const sh=document.getElementById("scanhelp");
+  sh.textContent = /ultra|wide|0\.5/.test(label) ? "Ultra-wide lens — may not focus close" : "Lens "+(camIdx+1)+" of "+cams.length+" · hold steady";
+  try{ await openStream(cams[camIdx].deviceId); }catch(e){ handleCamError(e); }
+};
 
 function scanLoop(){
   rafId = requestAnimationFrame(scanLoop);
@@ -1085,6 +1154,9 @@ function handleCamError(err){
 function stopScanner(){
   scanLabel.textContent="Scan a barcode"; scanning=false; reader.classList.remove("on");
   document.getElementById("zoomCtl").hidden=true;
+  document.getElementById("switchCam").hidden=true;
+  const tb=document.getElementById("torchBtn"); if(tb){tb.hidden=true;tb.setAttribute("aria-pressed","false");} torchOn=false;
+  const sh=document.getElementById("scanhelp"); if(sh) sh.textContent="Fill the frame with the barcode · hold steady";
   if(rafId){cancelAnimationFrame(rafId);rafId=null;} scanLoop._busy=false;
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;track=null;}
   const cam=document.getElementById("cam"); if(cam)cam.srcObject=null;
@@ -1094,28 +1166,62 @@ function stopScanner(){
 /* ============================================================
    INSTALL (PWA) — Android prompt + iOS instructions
    ============================================================ */
-const installBtn=$("#installBtn"), iosInstall=$("#iosInstall");
+const installBtn=$("#installBtn"), iosInstall=$("#iosInstall"), installHelp=$("#installHelp"), installHelpBody=$("#installHelpBody");
 let deferredPrompt=null;
 const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
-
-// Android / Chrome: capture the native install prompt
-window.addEventListener("beforeinstallprompt",(e)=>{
-  e.preventDefault();
-  deferredPrompt=e;
-  if(!standalone){ installBtn.hidden=false; $("#tag").style.display="none"; }
-});
-installBtn.onclick=async()=>{
-  if(!deferredPrompt)return;
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;
-  deferredPrompt=null; installBtn.hidden=true;
-};
-window.addEventListener("appinstalled",()=>{ installBtn.hidden=true; iosInstall.hidden=true; });
-
-// iOS Safari: no prompt API — show one-time Add-to-Home-Screen tip
-(function(){
+function plat(){
   const ua=navigator.userAgent||"";
-  const isIOS=/iPhone|iPad|iPod/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+  return {
+    isIOS:/iPhone|iPad|iPod/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1),
+    isAndroid:/Android/.test(ua)
+  };
+}
+function showInstallBtn(){ if(!standalone){ installBtn.hidden=false; $("#tag").style.display="none"; } }
+showInstallBtn();   // button is always available; a captured prompt just makes it one-tap
+
+// Android / Chrome: capture the native install prompt when offered
+window.addEventListener("beforeinstallprompt",(e)=>{ e.preventDefault(); deferredPrompt=e; showInstallBtn(); });
+
+installBtn.onclick=async()=>{
+  if(deferredPrompt){
+    try{
+      deferredPrompt.prompt();
+      const {outcome}=await deferredPrompt.userChoice;
+      deferredPrompt=null;
+      if(outcome==="accepted") installBtn.hidden=true;
+      return;
+    }catch(e){ /* fall through to manual steps */ }
+  }
+  showInstallHelp();
+};
+
+function showInstallHelp(){
+  const {isIOS,isAndroid}=plat();
+  let steps;
+  if(isIOS){
+    steps=`<b>Add to your Home Screen</b>
+      <p>In <b>Safari</b>, tap the <b>Share</b> button <span class="shareico">&#x2191;</span>, then <b>Add to Home Screen</b> → <b>Add</b>.</p>
+      <p style="color:var(--mono)">On iPhone, install only works in Safari — not Chrome.</p>`;
+  } else if(isAndroid){
+    steps=`<b>Install Verdict</b>
+      <p>If nothing popped up, tap Chrome's <b>⋮</b> menu (top-right), then <b>Add to Home screen</b> (newer Chrome says <b>Install app</b>) → <b>Install</b>.</p>
+      <p style="color:var(--mono)">Not there? Reload the page once so the app registers, then reopen the menu. Make sure you're on the https link, not a file.</p>`;
+  } else {
+    steps=`<b>Install Verdict</b>
+      <p>Click the <b>install icon</b> in the address bar, or open the <b>⋮</b> menu → <b>Install Verdict…</b></p>
+      <p style="color:var(--mono)">Available in Chrome and Edge.</p>`;
+  }
+  installHelpBody.innerHTML=steps;
+  installHelp.hidden=false;
+  installHelp.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+$("#helpX").onclick=()=>{ installHelp.hidden=true; };
+window.addEventListener("appinstalled",()=>{ installBtn.hidden=true; iosInstall.hidden=true; installHelp.hidden=true; });
+
+// iOS Safari: also show a one-time proactive Add-to-Home-Screen tip
+(function(){
+  const {isIOS}=plat();
+  const ua=navigator.userAgent||"";
   const isSafari=/Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
   let dismissed=false; try{dismissed=localStorage.getItem("verdict_ios_tip")==="1";}catch(e){}
   if(isIOS && isSafari && !standalone && !dismissed){ iosInstall.hidden=false; }
