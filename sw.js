@@ -1,5 +1,5 @@
 /* Verdict service worker — offline app shell + runtime caching */
-const CACHE = "verdict-v2";
+const CACHE = "verdict-v3";
 const SHELL = [
   "./",
   "./index.html",
@@ -10,10 +10,13 @@ const SHELL = [
   "./favicon.png"
 ];
 
-// Precache the app shell on install
+// Precache the app shell on install — tolerant: one missing file must not
+// abort the whole install (caches.addAll fails wholesale, so add individually)
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then((c) => Promise.allSettled(SHELL.map((u) => c.add(u))))
+      .then(() => self.skipWaiting())
   );
 });
 

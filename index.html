@@ -61,6 +61,14 @@
   .ios-install .shareico{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1.5px solid var(--ink-soft);border-radius:5px;font-size:12px;line-height:1;transform:translateY(2px)}
   .ios-x{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--mono);font-size:22px;line-height:1;cursor:pointer;padding:4px 8px}
   .ios-x:hover{color:var(--ink)}
+  .chk{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-top:1px solid var(--hair);font-size:12.8px;line-height:1.45;color:var(--ink)}
+  #checkResults .chk:first-child{border-top:none;margin-top:10px}
+  .chk .cd{width:9px;height:9px;border-radius:50%;flex:none;margin-top:4px}
+  .chk.ok .cd{background:var(--exc)}
+  .chk.bad .cd{background:var(--bad)}
+  .chk.info .cd{background:var(--mono)}
+  .chk.bad{font-weight:600}
+  .chk small{display:block;font-weight:400;color:var(--ink-soft)}
   /* running as an installed app: pad for the status bar */
   @media (display-mode:standalone){
     .wrap{padding-top:calc(22px + env(safe-area-inset-top))}
@@ -284,6 +292,8 @@
   <div class="ios-install" id="installHelp" hidden>
     <button class="ios-x" id="helpX" aria-label="Dismiss">&times;</button>
     <div id="installHelpBody"></div>
+    <button class="btn" id="checkBtn" style="margin-top:12px;width:100%">Run install check</button>
+    <div id="checkResults"></div>
   </div>
 
   <!-- ============ SCAN PANEL ============ -->
@@ -1249,6 +1259,79 @@ function showInstallHelp(){
 }
 $("#helpX").onclick=()=>{ installHelp.hidden=true; };
 window.addEventListener("appinstalled",()=>{ installBtn.hidden=true; iosInstall.hidden=true; installHelp.hidden=true; });
+
+/* ---------- install diagnostics ---------- */
+async function runInstallCheck(){
+  const res=$("#checkResults");
+  res.innerHTML=`<div class="chk info"><span class="cd"></span>Checking…</div>`;
+  const rows=[];
+  const add=(cls,txt,sub)=>rows.push(`<div class="chk ${cls}"><span class="cd"></span><div>${txt}${sub?`<small>${sub}</small>`:""}</div></div>`);
+
+  // 1. Secure context
+  window.isSecureContext
+    ? add("ok","Secure address (https)")
+    : add("bad","Not a secure address","Install needs the https:// GitHub Pages link, not a file or preview.");
+
+  // 2. Already installed?
+  if(standalone) add("info","Already running as the installed app");
+
+  // 3. Inside another app's browser?
+  const ua=navigator.userAgent||"";
+  if(/\bwv\b/.test(ua))
+    add("bad","This page is open inside another app, not the real Chrome","Tap ⋮ → Open in Chrome, then install from there. In-app browsers can't install.");
+
+  // 4. Manifest reachable + valid
+  let manifestOK=false;
+  const link=document.querySelector('link[rel="manifest"]');
+  if(!link){ add("bad","No manifest linked in the page"); }
+  else{
+    try{
+      const r=await fetch(link.href,{cache:"no-store"});
+      if(!r.ok){
+        add("bad",`manifest.webmanifest is missing from the site (HTTP ${r.status})`,"Upload manifest.webmanifest to the repo, next to index.html. Without it Chrome will never offer install.");
+      }else{
+        const m=await r.json();
+        const icons=m.icons||[];
+        const has192=icons.some(i=>/192/.test(i.sizes||"")), has512=icons.some(i=>/512/.test(i.sizes||""));
+        if(m.name && m.start_url && (m.display==="standalone"||m.display==="fullscreen") && has192 && has512){
+          add("ok","Manifest present and valid"); manifestOK=true;
+        }else add("bad","Manifest found but incomplete","It needs name, start_url, display standalone, and 192px + 512px icons.");
+        // 5. Icons actually on the server
+        const srcs=[...new Set(icons.map(i=>i.src))];
+        for(const src of srcs){
+          try{
+            const ir=await fetch(new URL(src,link.href),{cache:"no-store"});
+            if(!ir.ok) add("bad",`Icon missing: ${src} (HTTP ${ir.status})`,"Upload this file to the repo next to index.html.");
+          }catch(e){ add("bad",`Icon unreachable: ${src}`); }
+        }
+      }
+    }catch(e){ add("bad","Manifest couldn't be read","It may be missing from the repo, or not valid JSON."); }
+  }
+
+  // 6. Service worker
+  if("serviceWorker" in navigator){
+    try{
+      const reg=await navigator.serviceWorker.getRegistration();
+      if(reg && (reg.active||reg.installing||reg.waiting)) add("ok","Service worker registered");
+      else{
+        try{
+          const sr=await fetch("sw.js",{cache:"no-store"});
+          sr.ok
+            ? add("bad","Service worker not registered yet","Reload the page once, wait a few seconds, then run this check again.")
+            : add("bad",`sw.js is missing from the site (HTTP ${sr.status})`,"Upload sw.js to the repo, next to index.html.");
+        }catch(e){ add("bad","sw.js couldn't be fetched"); }
+      }
+    }catch(e){ add("info","Couldn't query the service worker"); }
+  } else add("info","This browser doesn't support service workers");
+
+  // 7. Chrome's own prompt
+  deferredPrompt
+    ? add("ok","Chrome's install prompt is ready","Close this and tap Install again — it should install in one tap.")
+    : add("info","Chrome hasn't offered its automatic prompt this visit","If everything above is green, use ⋮ → Add to Home screen / Install app. If you installed and removed it before, Chrome hides the prompt for a while — the menu still works.");
+
+  res.innerHTML=rows.join("");
+}
+$("#checkBtn").onclick=runInstallCheck;
 
 // iOS Safari: also show a one-time proactive Add-to-Home-Screen tip
 (function(){
