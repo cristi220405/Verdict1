@@ -504,7 +504,7 @@ const PANTRY = [
   {code:"3168930010265", name:"Salted potato crisps", brand:"Lay's", cat:"crisp",
    n:{energy_kj:2240,sugars:0.6,sat_fat:3.4,sodium:520,fiber:4.3,proteins:6.6,fruit:0}, add:[], organic:false,
    diet:{palm:false,gluten:false,lactose:false,vegan:true}},
-  {code:"5000108453685", name:"Rolled porridge oats", brand:"Quaker", cat:"cereal",
+  {code:"5000108453680", name:"Rolled porridge oats", brand:"Quaker", cat:"cereal",
    n:{energy_kj:1490,sugars:1.1,sat_fat:1.3,sodium:3,fiber:10,proteins:11,fruit:0}, add:[], organic:false,
    diet:{palm:false,gluten:false,lactose:false,vegan:true}},
   {code:"3083681025255", name:"Chickpeas, canned", brand:"Cassegrain", cat:"pulse",
@@ -513,7 +513,7 @@ const PANTRY = [
   {code:"3033490004743", name:"Plain wholegrain bread", brand:"Bakery", cat:"bread",
    n:{energy_kj:1000,sugars:2.5,sat_fat:0.6,sodium:400,fiber:7,proteins:9,fruit:0}, add:["e300"], organic:true,
    diet:{palm:false,gluten:true,lactose:false,vegan:true}},
-  {code:"3095550005704", name:"Sugar-frosted flakes", brand:"Cereal Co.", cat:"cereal",
+  {code:"3095550005701", name:"Sugar-frosted flakes", brand:"Cereal Co.", cat:"cereal",
    n:{energy_kj:1600,sugars:37,sat_fat:0.6,sodium:230,fiber:2,proteins:5,fruit:0}, add:["e102","e160a"], organic:false,
    diet:{palm:false,gluten:true,lactose:false,vegan:true}}
 ];
@@ -676,7 +676,13 @@ function loading(){
   body.innerHTML = `<div class="section"><div class="state"><div class="spinner"></div><p class="em" style="font-weight:600">Reading the label…</p><p>Looking this barcode up.</p></div></div>`;
 }
 function notFound(code){
-  body.innerHTML = `<div class="section"><div class="state"><p class="em">Not in the database yet</p><p>No product found for <b style="font-family:'Space Mono',monospace">${code}</b>. On Open Food Facts, anyone can add it — that's how the database grows.</p></div></div>`;
+  body.innerHTML = `<div class="section"><div class="state">
+    <p class="em">Not in the database yet</p>
+    <p>No product found for <b style="font-family:'Space Mono',monospace">${code}</b>. If that number doesn't match the one printed under the barcode, it was a misread — scan again. If it does match, the product just isn't on Open Food Facts yet (anyone can add it).</p>
+    <button class="btn" id="rescanBtn" style="margin-top:18px;width:auto">Scan again</button>
+  </div></div>`;
+  const rb=document.getElementById("rescanBtn");
+  if(rb) rb.onclick=()=>{ showScan(); startScanner(); };
 }
 function lookupError(kind, code){
   const offline = kind==="offline";
@@ -808,7 +814,7 @@ function findAlternative(p){
     .filter(o=>o.s>scoreProduct(p).total+10)
     .sort((a,b)=>b.s-a.s)[0];
   // cross-category sensible swaps when no same-category match
-  const SWAP={soda:"5000108453685", spread:"3033490004743", biscuit:"5000108453685", crisp:"3083681025255", cereal:"5000108453685"};
+  const SWAP={soda:"5000108453680", spread:"3033490004743", biscuit:"5000108453680", crisp:"3083681025255", cereal:"5000108453680"};
   if(!better && SWAP[p.cat]){
     const x=PANTRY.find(q=>q.code===SWAP[p.cat]);
     if(x) return {x, s:scoreProduct(x).total};
@@ -1011,6 +1017,7 @@ async function startScanner(){
     showCamNote("insecure"); return;
   }
   reader.classList.add("on"); scanLabel.textContent="Stop camera"; scanning=true;
+  lastSeen=null; seenCount=0;
   try{
     if("BarcodeDetector" in window){
       const supported = await BarcodeDetector.getSupportedFormats();
@@ -1094,6 +1101,25 @@ document.getElementById("switchCam").onclick = async ()=>{
   try{ await openStream(cams[camIdx].deviceId); }catch(e){ handleCamError(e); }
 };
 
+// EAN-13 / UPC-A / GTIN-14 carry a check digit; validating it rejects most misreads
+function validGTIN(code){
+  if(!/^\d+$/.test(code)) return false;
+  const d=code.split("").map(Number);
+  const check=d.pop();
+  let sum=0, w=3;
+  for(let i=d.length-1;i>=0;i--){ sum+=d[i]*w; w=(w===3?1:3); }
+  return ((10-(sum%10))%10)===check;
+}
+let lastSeen=null, seenCount=0;
+function acceptable(raw){
+  if(!/^\d+$/.test(raw)) return false;
+  if(![8,12,13,14].includes(raw.length)) return false;   // valid GTIN lengths only
+  if(raw.length>=12 && !validGTIN(raw)) return false;     // checksum for the common grocery formats
+  // require the same value on consecutive frames (stricter for short codes)
+  if(raw===lastSeen){ seenCount++; } else { lastSeen=raw; seenCount=1; }
+  return seenCount >= (raw.length===8 ? 3 : 2);
+}
+
 function scanLoop(){
   rafId = requestAnimationFrame(scanLoop);
   const cam=document.getElementById("cam");
@@ -1103,7 +1129,7 @@ function scanLoop(){
     scanLoop._busy=false;
     if(codes && codes.length){
       const raw=(codes[0].rawValue||"").replace(/\D/g,"");
-      if(raw.length>=8){ if(navigator.vibrate)navigator.vibrate(40); stopScanner(); lookup(raw); }
+      if(acceptable(raw)){ if(navigator.vibrate)navigator.vibrate(40); stopScanner(); lookup(raw); }
     }
   }).catch(()=>{ scanLoop._busy=false; });
 }
@@ -1139,7 +1165,12 @@ async function startFallback(){
   await scanner.start(
     { facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080}, advanced:[{focusMode:"continuous"}] },
     { fps:15, disableFlip:true, qrbox:(w)=>{const bw=Math.min(w*0.85,340);return {width:bw,height:Math.max(150,Math.round(bw*0.55))};} },
-    txt=>{ stopScanner(); lookup(txt); }, ()=>{}
+    txt=>{
+      const raw=(txt||"").replace(/\D/g,"");
+      if(![8,12,13,14].includes(raw.length)) return;          // ignore junk reads, keep scanning
+      if(raw.length>=12 && !validGTIN(raw)) return;           // reject checksum failures
+      stopScanner(); lookup(raw);
+    }, ()=>{}
   );
 }
 
@@ -1156,6 +1187,7 @@ function stopScanner(){
   document.getElementById("zoomCtl").hidden=true;
   document.getElementById("switchCam").hidden=true;
   const tb=document.getElementById("torchBtn"); if(tb){tb.hidden=true;tb.setAttribute("aria-pressed","false");} torchOn=false;
+  lastSeen=null; seenCount=0;
   const sh=document.getElementById("scanhelp"); if(sh) sh.textContent="Fill the frame with the barcode · hold steady";
   if(rafId){cancelAnimationFrame(rafId);rafId=null;} scanLoop._busy=false;
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;track=null;}
