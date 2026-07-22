@@ -1122,7 +1122,7 @@ async function fetchOFF(code){
   const url = `https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=${OFF_FIELDS}`;
   let res;
   try{ res = await fetchWithTimeout(url, 9000); }
-  catch(e){ throw new Error("offline"); }               // no connection / aborted
+  catch(e){ throw new Error(netKind()); }               // ask the browser rather than assuming
   if(res.status===404) throw new Error("notfound");
   if(!res.ok) throw new Error("server");                // 5xx, 429, etc.
   let j;
@@ -1132,23 +1132,39 @@ async function fetchOFF(code){
   return mapOFF(j.product, code);
 }
 
-/* ---------- search by name ---------- */
-async function searchProducts(term, kind){
-  const host = kind==="cosmetic" ? "world.openbeautyfacts.org" : "world.openfoodfacts.org";
-  const fields = kind==="cosmetic"
-    ? "code,product_name,brands,image_front_small_url,image_front_url,image_small_url,ingredients_text,ingredients,labels_tags,categories_tags"
-    : OFF_FIELDS;
-  const url = `https://${host}/cgi/search.pl?search_terms=${encodeURIComponent(term)}`
-            + `&search_simple=1&action=process&json=1&page_size=20&fields=${fields}`;
-  let res;
-  try{ res = await fetchWithTimeout(url, 12000); }
-  catch(e){ throw new Error("offline"); }
+/* ---------- search by name ----------
+   Note: a blocked cross-origin request and a dead connection are
+   indistinguishable in JS, so never guess "offline" — ask the browser. */
+const OBF_FIELDS = "code,product_name,brands,image_front_small_url,image_front_url,image_small_url,ingredients_text,ingredients,labels_tags,categories_tags";
+
+function netKind(){ return navigator.onLine===false ? "offline" : "server"; }
+
+async function searchOnce(url, kind){
+  const res = await fetchWithTimeout(url, 12000);      // throws on network/CORS failure
   if(!res.ok) throw new Error("server");
-  let j;
-  try{ j = await res.json(); }
-  catch(e){ throw new Error("server"); }
-  const list = (j.products||[]).filter(p=>p.code && (p.product_name||"").trim());
-  return list.map(pr=> kind==="cosmetic" ? mapOBF(pr, pr.code) : mapOFF(pr, pr.code));
+  const j = await res.json();
+  const arr = j.hits || j.products || [];              // search-a-licious uses hits, legacy uses products
+  return arr
+    .filter(pr => pr && pr.code && (pr.product_name||"").trim())
+    .map(pr => kind==="cosmetic" ? mapOBF(pr, pr.code) : mapOFF(pr, pr.code));
+}
+
+async function searchProducts(term, kind){
+  const t = encodeURIComponent(term);
+  // try the modern search service first, then the legacy endpoint as a fallback
+  const urls = kind==="cosmetic"
+    ? [`https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${t}&search_simple=1&action=process&json=1&page_size=20&fields=${OBF_FIELDS}`]
+    : [`https://search.openfoodfacts.org/search?q=${t}&page_size=20&fields=${OFF_FIELDS}`,
+       `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${t}&search_simple=1&action=process&json=1&page_size=20&fields=${OFF_FIELDS}`];
+  let anyReached=false;
+  for(let i=0;i<urls.length;i++){
+    try{
+      const list = await searchOnce(urls[i], kind);
+      anyReached=true;
+      if(list.length || i===urls.length-1) return list;   // empty result from the last option is a real "no matches"
+    }catch(e){ /* try the next endpoint */ }
+  }
+  throw new Error(anyReached ? "server" : netKind());
 }
 
 /* ---------- Open Beauty Facts (cosmetics) ---------- */
@@ -1173,7 +1189,7 @@ async function fetchOBF(code){
   const url = `https://world.openbeautyfacts.org/api/v2/product/${code}.json?fields=code,product_name,brands,image_front_small_url,image_front_url,image_small_url,ingredients_text,ingredients,labels_tags,categories_tags`;
   let res;
   try{ res = await fetchWithTimeout(url, 9000); }
-  catch(e){ throw new Error("offline"); }
+  catch(e){ throw new Error(netKind()); }
   if(res.status===404) throw new Error("notfound");
   if(!res.ok) throw new Error("server");
   let j;
@@ -1234,10 +1250,10 @@ function notFound(code){
 }
 function lookupError(kind, code){
   const offline = kind==="offline";
-  const em = offline ? "You appear to be offline" : "Open Food Facts didn't respond";
+  const em = offline ? "You're offline" : "The database didn't respond";
   const msg = offline
-    ? "Live lookups need a connection. Your recent scans and the pantry still work offline."
-    : "Their servers hiccuped or this product's data couldn't be read. It's usually temporary — give it another try.";
+    ? "Your phone reports no connection. Your saved scans and the samples still work offline."
+    : "Open Food Facts didn't answer, or this product's data couldn't be read. That's usually temporary — give it another try.";
   body.innerHTML = `<div class="section"><div class="state">
       <p class="em">${em}</p><p>${msg}</p>
       <button class="btn" id="retryBtn" style="margin-top:18px;width:auto">Try again</button>
@@ -1874,8 +1890,10 @@ async function runSearch(term){
   }catch(err){
     const k = err.message==="offline" ? "offline" : "server";
     body.innerHTML = `<div class="section"><div class="state">
-      <p class="em">${k==="offline"?"You appear to be offline":"Search didn't respond"}</p>
-      <p>${k==="offline"?"Searching needs a connection — barcode scanning of saved items still works.":"The search server hiccuped. It's usually temporary."}</p>
+      <p class="em">${k==="offline"?"You're offline":"Search is unavailable"}</p>
+      <p>${k==="offline"
+        ? "Your phone reports no connection. Saved items and the samples still work offline."
+        : "The product database's search service isn't responding — this is on their end, not yours. Scanning a barcode or typing one in still works."}</p>
       <button class="btn" id="retrySearch" style="margin-top:18px;width:auto">Try again</button>
     </div></div>`;
     const rb=document.getElementById("retrySearch");
