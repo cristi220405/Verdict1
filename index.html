@@ -375,6 +375,20 @@
 
   /* personal priorities */
   .priofoot{font-size:11.5px;color:var(--mono);margin:12px 0 0;line-height:1.5}
+  /* not-found actions + manual entry form */
+  .nfacts{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+  .nfbtn{width:100%;text-decoration:none}
+  a.nfbtn{display:inline-flex;align-items:center;justify-content:center}
+  .nffoot{font-size:11.5px;color:var(--mono);line-height:1.55;margin:14px 0 0;text-align:center}
+  .ofield{display:block;margin-bottom:12px}
+  .ofield span{display:block;font-size:11.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:500}
+  .ofield input,.ofield textarea{width:100%;font-family:"Inter",sans-serif;font-size:14.5px;padding:11px 12px;
+    border:1.5px solid var(--hair);border-radius:11px;background:var(--paper);color:var(--ink);resize:vertical}
+  .ofield input:focus,.ofield textarea:focus{outline:none;border-color:var(--ink)}
+  .ogrid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+  .ocheck{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:500;margin-top:4px}
+  .ocheck input{width:18px;height:18px;accent-color:var(--exc)}
+  .linkbtn{background:none;border:none;padding:0;font:inherit;color:var(--ink);text-decoration:underline;cursor:pointer}
 
   /* --- home hierarchy: the scan card is the hero, settings recede --- */
   #scanPanel{box-shadow:0 1px 2px rgba(22,33,27,.05), 0 18px 44px rgba(22,33,27,.10)}
@@ -740,6 +754,158 @@ const ADDITIVES = {
   e920:{n:"L-cysteine",r:0,d:"Dough conditioner; no known risk."},
   e924:{n:"Potassium bromate",r:3,d:"Flour treatment — banned in EU, UK, Canada."},
   e1442:{n:"Modified starch",r:0,d:"Modified starch thickener; no known risk."},
+  // ---- further colours ----
+  e101a:{n:"Riboflavin-5'-phosphate",r:0,d:"Vitamin B2 derivative used as colour."},
+  e123:{n:"Amaranth",r:2,d:"Azo dye; banned in the US, restricted in the EU."},
+  e128:{n:"Red 2G",r:3,d:"Azo dye — banned in the EU since 2007."},
+  e142:{n:"Green S",r:2,d:"Synthetic green dye."},
+  e143:{n:"Fast Green FCF",r:2,d:"Synthetic dye; not permitted in the EU."},
+  e154:{n:"Brown FK",r:2,d:"Azo dye; banned in the EU."},
+  e160d:{n:"Lycopene",r:0,d:"Natural red colour from tomatoes."},
+  e161g:{n:"Canthaxanthin",r:2,d:"Colour; retinal deposits reported at high intake."},
+  e173:{n:"Aluminium",r:2,d:"Metallic decorative colour; aluminium intake concern."},
+  e174:{n:"Silver",r:1,d:"Decorative metallic colour."},
+  e175:{n:"Gold",r:0,d:"Decorative metallic colour; inert."},
+  e180:{n:"Litholrubine BK",r:2,d:"Synthetic colour used on cheese rind."},
+  // ---- further preservatives ----
+  e201:{n:"Sodium sorbate",r:1,d:"Preservative; mild concern."},
+  e203:{n:"Calcium sorbate",r:1,d:"Preservative; mild concern."},
+  e213:{n:"Calcium benzoate",r:1,d:"Preservative; benzene formation concern with vitamin C."},
+  e214:{n:"Ethyl p-hydroxybenzoate",r:2,d:"Paraben preservative."},
+  e216:{n:"Propyl p-hydroxybenzoate",r:3,d:"Paraben — banned as a food additive in the EU."},
+  e218:{n:"Methyl p-hydroxybenzoate",r:2,d:"Paraben preservative."},
+  e222:{n:"Sodium bisulphite",r:1,d:"Sulphite preservative; allergen trigger."},
+  e226:{n:"Calcium sulphite",r:1,d:"Sulphite preservative; allergen trigger."},
+  e228:{n:"Potassium bisulphite",r:1,d:"Sulphite preservative; allergen trigger."},
+  e230:{n:"Biphenyl",r:3,d:"Citrus surface fungicide — banned in the EU."},
+  e231:{n:"Orthophenyl phenol",r:2,d:"Surface fungicide on citrus skins."},
+  e233:{n:"Thiabendazole",r:2,d:"Fungicide applied to fruit skins."},
+  e234:{n:"Nisin",r:0,d:"Natural preservative produced by bacteria."},
+  e235:{n:"Natamycin",r:1,d:"Antifungal used on cheese rind and cured meat."},
+  e239:{n:"Hexamethylene tetramine",r:2,d:"Preservative that releases formaldehyde."},
+  e242:{n:"Dimethyl dicarbonate",r:1,d:"Cold-sterilising agent for drinks."},
+  e280:{n:"Propionic acid",r:1,d:"Bread preservative."},
+  e282:{n:"Calcium propionate",r:1,d:"Bread preservative; behavioural questions raised."},
+  e284:{n:"Boric acid",r:3,d:"Tightly restricted; reproductive toxicity concerns."},
+  e285:{n:"Borax",r:3,d:"Tightly restricted; reproductive toxicity concerns."},
+  e290:{n:"Carbon dioxide",r:0,d:"Carbonation gas."},
+  // ---- further antioxidants and acidity regulators ----
+  e263:{n:"Calcium acetate",r:0,d:"Acidity regulator; no known risk."},
+  e297:{n:"Fumaric acid",r:0,d:"Acidity regulator; no known risk."},
+  e304:{n:"Ascorbyl palmitate",r:0,d:"Fat-soluble vitamin C antioxidant."},
+  e311:{n:"Octyl gallate",r:2,d:"Antioxidant; allergy and safety questions."},
+  e312:{n:"Dodecyl gallate",r:2,d:"Antioxidant; allergy and safety questions."},
+  e315:{n:"Erythorbic acid",r:0,d:"Antioxidant related to vitamin C."},
+  e316:{n:"Sodium erythorbate",r:0,d:"Antioxidant related to vitamin C."},
+  e326:{n:"Potassium lactate",r:0,d:"Acidity regulator; no known risk."},
+  e327:{n:"Calcium lactate",r:0,d:"Acidity regulator; no known risk."},
+  e334:{n:"Tartaric acid",r:0,d:"Fruit acid; no known risk."},
+  e336:{n:"Potassium tartrate",r:0,d:"Cream of tartar; no known risk."},
+  e337:{n:"Sodium potassium tartrate",r:0,d:"Acidity regulator; no known risk."},
+  e350:{n:"Sodium malate",r:0,d:"Acidity regulator; no known risk."},
+  e355:{n:"Adipic acid",r:0,d:"Acidity regulator; no known risk."},
+  e363:{n:"Succinic acid",r:0,d:"Acidity regulator; no known risk."},
+  e380:{n:"Triammonium citrate",r:0,d:"Acidity regulator; no known risk."},
+  e385:{n:"Calcium disodium EDTA",r:2,d:"Chelating agent; limited intake advised."},
+  e392:{n:"Rosemary extract",r:0,d:"Natural antioxidant."},
+  // ---- further thickeners, emulsifiers and stabilisers ----
+  e400:{n:"Alginic acid",r:0,d:"Seaweed thickener; no known risk."},
+  e402:{n:"Potassium alginate",r:0,d:"Seaweed thickener; no known risk."},
+  e405:{n:"Propylene glycol alginate",r:1,d:"Modified seaweed thickener."},
+  e407a:{n:"Processed eucheuma seaweed",r:1,d:"Seaweed thickener; similar debate to carrageenan."},
+  e413:{n:"Tragacanth",r:0,d:"Natural gum; no known risk."},
+  e416:{n:"Karaya gum",r:0,d:"Natural gum; no known risk."},
+  e417:{n:"Tara gum",r:0,d:"Natural gum; no known risk."},
+  e418:{n:"Gellan gum",r:0,d:"Fermentation-derived gelling agent."},
+  e421:{n:"Mannitol",r:1,d:"Sugar alcohol; laxative effect in quantity."},
+  e425:{n:"Konjac",r:1,d:"Gelling fibre; choking risk in jelly sweets."},
+  e427:{n:"Cassia gum",r:0,d:"Plant gum thickener."},
+  e433:{n:"Polysorbate 80",r:2,d:"Emulsifier; emerging gut-microbiome concerns."},
+  e435:{n:"Polysorbate 60",r:2,d:"Emulsifier; emerging gut-microbiome concerns."},
+  e436:{n:"Polysorbate 65",r:2,d:"Emulsifier; emerging gut-microbiome concerns."},
+  e442:{n:"Ammonium phosphatides",r:1,d:"Chocolate emulsifier."},
+  e444:{n:"Sucrose acetate isobutyrate",r:1,d:"Drink stabiliser."},
+  e445:{n:"Glycerol esters of wood rosin",r:1,d:"Drink stabiliser."},
+  e452:{n:"Polyphosphates",r:2,d:"Phosphate additive; excess intake linked to kidney and bone effects."},
+  e459:{n:"Beta-cyclodextrin",r:1,d:"Carrier and stabiliser."},
+  e464:{n:"Hydroxypropyl methylcellulose",r:0,d:"Plant-derived thickener."},
+  e465:{n:"Ethyl methyl cellulose",r:0,d:"Plant-derived thickener."},
+  e470a:{n:"Fatty acid salts",r:0,d:"Emulsifier; no known risk."},
+  e472a:{n:"Acetic acid esters of mono- & diglycerides",r:1,d:"Emulsifier; may be palm-derived."},
+  e472b:{n:"Lactic acid esters of mono- & diglycerides",r:1,d:"Emulsifier; may be palm-derived."},
+  e472c:{n:"Citric acid esters of mono- & diglycerides",r:1,d:"Emulsifier; may be palm-derived."},
+  e473:{n:"Sucrose esters of fatty acids",r:1,d:"Emulsifier."},
+  e475:{n:"Polyglycerol esters of fatty acids",r:1,d:"Emulsifier; often palm-derived."},
+  e477:{n:"Propylene glycol esters of fatty acids",r:1,d:"Emulsifier."},
+  e482:{n:"Calcium stearoyl lactylate",r:1,d:"Dough conditioner."},
+  e491:{n:"Sorbitan monostearate",r:1,d:"Emulsifier."},
+  e492:{n:"Sorbitan tristearate",r:1,d:"Emulsifier."},
+  // ---- mineral salts, anti-caking and raising agents ----
+  e500:{n:"Sodium carbonates",r:0,d:"Bicarbonate of soda; raising agent."},
+  e501:{n:"Potassium carbonates",r:0,d:"Raising agent; no known risk."},
+  e503:{n:"Ammonium carbonates",r:0,d:"Raising agent; no known risk."},
+  e504:{n:"Magnesium carbonate",r:0,d:"Anti-caking agent; no known risk."},
+  e507:{n:"Hydrochloric acid",r:0,d:"Processing acid; neutralised in the food."},
+  e508:{n:"Potassium chloride",r:0,d:"Salt substitute; no known risk."},
+  e509:{n:"Calcium chloride",r:0,d:"Firming agent; no known risk."},
+  e511:{n:"Magnesium chloride",r:0,d:"Firming agent; no known risk."},
+  e516:{n:"Calcium sulphate",r:0,d:"Firming agent; no known risk."},
+  e520:{n:"Aluminium sulphate",r:2,d:"Firming agent; aluminium intake concern."},
+  e524:{n:"Sodium hydroxide",r:0,d:"Processing alkali; neutralised in the food."},
+  e526:{n:"Calcium hydroxide",r:0,d:"Processing alkali; no known risk."},
+  e535:{n:"Sodium ferrocyanide",r:1,d:"Anti-caking agent in salt."},
+  e536:{n:"Potassium ferrocyanide",r:1,d:"Anti-caking agent in salt."},
+  e541:{n:"Sodium aluminium phosphate",r:2,d:"Raising agent; aluminium intake concern."},
+  e551:{n:"Silicon dioxide",r:1,d:"Anti-caking agent; nanoparticle questions."},
+  e552:{n:"Calcium silicate",r:1,d:"Anti-caking agent."},
+  e553b:{n:"Talc",r:2,d:"Anti-caking agent; purity concerns."},
+  e554:{n:"Sodium aluminium silicate",r:2,d:"Anti-caking agent; aluminium intake concern."},
+  e555:{n:"Potassium aluminium silicate",r:2,d:"Anti-caking agent; aluminium intake concern."},
+  e570:{n:"Fatty acids",r:0,d:"Emulsifier and glazing agent."},
+  e575:{n:"Glucono delta-lactone",r:0,d:"Acidity regulator; no known risk."},
+  e576:{n:"Sodium gluconate",r:0,d:"Sequestrant; no known risk."},
+  e579:{n:"Ferrous gluconate",r:0,d:"Iron salt used to colour olives."},
+  e585:{n:"Ferrous lactate",r:0,d:"Iron salt used to colour olives."},
+  // ---- further flavour enhancers ----
+  e622:{n:"Monopotassium glutamate",r:1,d:"Flavour enhancer; MSG family."},
+  e623:{n:"Calcium diglutamate",r:1,d:"Flavour enhancer; MSG family."},
+  e626:{n:"Guanylic acid",r:1,d:"Flavour enhancer."},
+  e630:{n:"Inosinic acid",r:1,d:"Flavour enhancer."},
+  e640:{n:"Glycine",r:0,d:"Amino acid used as flavour modifier."},
+  // ---- further sweeteners ----
+  e953:{n:"Isomalt",r:1,d:"Sugar alcohol; laxative in quantity."},
+  e957:{n:"Thaumatin",r:0,d:"Natural protein sweetener."},
+  e959:{n:"Neohesperidine DC",r:1,d:"Citrus-derived sweetener."},
+  e961:{n:"Neotame",r:1,d:"High-intensity sweetener."},
+  e962:{n:"Aspartame-acesulfame salt",r:1,d:"Combined sweetener; contains aspartame."},
+  e966:{n:"Lactitol",r:1,d:"Sugar alcohol; laxative in quantity."},
+  e969:{n:"Advantame",r:1,d:"High-intensity sweetener; limited long-term data."},
+  // ---- glazing agents, gases and processing aids ----
+  e900:{n:"Dimethylpolysiloxane",r:1,d:"Anti-foaming agent used in frying oil."},
+  e901:{n:"Beeswax",r:0,d:"Natural glazing agent."},
+  e902:{n:"Candelilla wax",r:0,d:"Plant glazing agent."},
+  e905:{n:"Microcrystalline wax",r:1,d:"Petroleum-derived glaze."},
+  e914:{n:"Oxidised polyethylene wax",r:1,d:"Synthetic glazing agent."},
+  e927b:{n:"Carbamide",r:1,d:"Urea; used in chewing gum."},
+  e938:{n:"Argon",r:0,d:"Packaging gas; inert."},
+  e939:{n:"Helium",r:0,d:"Packaging gas; inert."},
+  e941:{n:"Nitrogen",r:0,d:"Packaging gas; inert."},
+  e942:{n:"Nitrous oxide",r:0,d:"Propellant in aerosol cream."},
+  e948:{n:"Oxygen",r:0,d:"Packaging gas."},
+  e999:{n:"Quillaia extract",r:1,d:"Foaming agent from tree bark."},
+  e1105:{n:"Lysozyme",r:1,d:"Preservative from egg white; allergen."},
+  e1200:{n:"Polydextrose",r:0,d:"Bulking fibre; laxative in quantity."},
+  e1201:{n:"Polyvinylpyrrolidone",r:1,d:"Binder and clarifying agent."},
+  e1404:{n:"Oxidised starch",r:0,d:"Modified starch; no known risk."},
+  e1412:{n:"Distarch phosphate",r:0,d:"Modified starch; no known risk."},
+  e1414:{n:"Acetylated distarch phosphate",r:0,d:"Modified starch; no known risk."},
+  e1420:{n:"Acetylated starch",r:0,d:"Modified starch; no known risk."},
+  e1422:{n:"Acetylated distarch adipate",r:0,d:"Modified starch; no known risk."},
+  e1450:{n:"Starch sodium octenyl succinate",r:0,d:"Modified starch; no known risk."},
+  e1505:{n:"Triethyl citrate",r:0,d:"Carrier solvent; no known risk."},
+  e1510:{n:"Ethanol",r:1,d:"Alcohol used as carrier solvent."},
+  e1518:{n:"Glyceryl triacetate",r:0,d:"Humectant and carrier."},
+  e1520:{n:"Propylene glycol",r:1,d:"Carrier solvent; intake limits apply."},
   // ---- Non-E entries seen on labels ----
   vanillin:{n:"Vanillin",r:0,d:"Artificial vanilla flavour."},
   caffeine:{n:"Caffeine",r:1,d:"Stimulant."}
@@ -994,7 +1160,114 @@ const INCI = {
   "simmondsia chinensis seed oil":{r:0,d:"Jojoba oil."},
   "cocos nucifera oil":{r:0,d:"Coconut oil."},
   "urea":{r:0,d:"Humectant; skin softener."},
-  "lactic acid":{r:0,d:"Exfoliating acid; mild at low levels."}
+  "lactic acid":{r:0,d:"Exfoliating acid; mild at low levels."},
+  // ---- further high concern ----
+  "triclocarban":{r:3,d:"Antibacterial; endocrine and resistance concerns."},
+  "bronopol":{r:3,d:"Preservative that can release formaldehyde and nitrosamines."},
+  "2-bromo-2-nitropropane-1,3-diol":{r:3,d:"Bronopol; formaldehyde-releasing preservative."},
+  "benzylhemiformal":{r:3,d:"Formaldehyde-releasing preservative."},
+  "methenamine":{r:3,d:"Formaldehyde-releasing preservative."},
+  "sodium hydroxymethylglycinate":{r:3,d:"Formaldehyde-releasing preservative."},
+  "diethyl phthalate":{r:3,d:"Phthalate; endocrine disruption concerns."},
+  "dibutyl phthalate":{r:3,d:"Phthalate banned in EU cosmetics."},
+  "iodopropynyl butylcarbamate":{r:3,d:"Preservative; sensitiser, restricted in leave-on products."},
+  "4-methylbenzylidene camphor":{r:3,d:"UV filter; endocrine disruption concerns."},
+  "toluene-2,5-diamine":{r:3,d:"Hair dye; strong sensitiser."},
+  "benzophenone-4":{r:3,d:"UV filter; endocrine concerns."},
+  "cyclomethicone":{r:3,d:"Silicone blend that may contain restricted D4/D5."},
+  // ---- further moderate concern ----
+  "chlorphenesin":{r:2,d:"Preservative; irritation reported."},
+  "chlorhexidine digluconate":{r:2,d:"Antiseptic; sensitisation possible."},
+  "benzalkonium chloride":{r:2,d:"Preservative; irritant to eyes and skin."},
+  "cyclohexasiloxane":{r:2,d:"Silicone (D6); environmental persistence."},
+  "petrolatum":{r:1,d:"Mineral-oil derivative; safe when fully refined, as required in the EU."},
+  "paraffinum liquidum":{r:1,d:"Mineral oil; safe when fully refined, as required in the EU."},
+  "mineral oil":{r:1,d:"Petroleum-derived emollient; safe when fully refined."},
+  "laureth-4":{r:2,d:"Ethoxylated surfactant; 1,4-dioxane contamination concern."},
+  "ceteareth-20":{r:2,d:"Ethoxylated emulsifier; contamination concern."},
+  "peg-8":{r:2,d:"PEG compound; possible contamination concerns."},
+  "peg-12":{r:2,d:"PEG compound; possible contamination concerns."},
+  "peg-7 glyceryl cocoate":{r:2,d:"PEG compound; possible contamination concerns."},
+  "sodium coco-sulfate":{r:2,d:"Detergent closely related to SLS."},
+  "ammonium laureth sulfate":{r:2,d:"Detergent; can irritate."},
+  "padimate o":{r:2,d:"UV filter; endocrine questions."},
+  "ethylhexyl salicylate":{r:2,d:"UV filter; absorbed through skin."},
+  "isoeugenol":{r:2,d:"Fragrance allergen; restricted in the EU."},
+  "cinnamal":{r:2,d:"Fragrance allergen; must be declared in the EU."},
+  "evernia prunastri extract":{r:2,d:"Oakmoss; restricted fragrance allergen."},
+  "evernia furfuracea extract":{r:2,d:"Treemoss; restricted fragrance allergen."},
+  "aluminium zirconium tetrachlorohydrex gly":{r:2,d:"Antiperspirant salt; debated safety."},
+  "ammonium hydroxide":{r:2,d:"Hair-dye alkaliser; irritant."},
+  "sodium hydroxide":{r:2,d:"pH adjuster; irritant at high concentration."},
+  "thioglycolic acid":{r:2,d:"Perming and depilatory agent; irritant."},
+  "hydrogen peroxide":{r:2,d:"Bleaching agent; irritant."},
+  "polyacrylamide":{r:2,d:"Thickener; acrylamide residue concern."},
+  // ---- further low concern ----
+  "dehydroacetic acid":{r:1,d:"Preservative; low concern."},
+  "sodium salicylate":{r:1,d:"Preservative; avoid in pregnancy at high doses."},
+  "salicylic acid":{r:1,d:"Exfoliating acid; caution in pregnancy."},
+  "glycolic acid":{r:1,d:"Exfoliating acid; increases sun sensitivity."},
+  "benzoyl peroxide":{r:1,d:"Acne treatment; irritating and bleaches fabric."},
+  "kojic acid":{r:1,d:"Brightening agent; sensitisation possible."},
+  "arbutin":{r:1,d:"Brightening agent; releases small amounts of hydroquinone."},
+  "caprylyl glycol":{r:1,d:"Mild preservative booster."},
+  "ethylhexylglycerin":{r:1,d:"Preservative booster; occasional irritant."},
+  "butyl methoxydibenzoylmethane":{r:1,d:"Avobenzone UV filter; degrades in sunlight."},
+  "dimethiconol":{r:1,d:"Silicone; safe on skin, environmental debate."},
+  "amodimethicone":{r:1,d:"Hair-conditioning silicone."},
+  "phenyl trimethicone":{r:1,d:"Conditioning silicone."},
+  "behentrimonium chloride":{r:1,d:"Hair conditioner; irritant at high levels."},
+  "cetrimonium chloride":{r:1,d:"Hair conditioner; irritant at high levels."},
+  "polyquaternium-7":{r:1,d:"Conditioning polymer."},
+  "farnesol":{r:1,d:"Fragrance allergen; must be declared in the EU."},
+  "amyl cinnamal":{r:1,d:"Fragrance allergen."},
+  "cinnamyl alcohol":{r:1,d:"Fragrance allergen."},
+  "hydroxycitronellal":{r:1,d:"Fragrance allergen."},
+  "alpha-isomethyl ionone":{r:1,d:"Fragrance allergen."},
+  "melaleuca alternifolia leaf oil":{r:1,d:"Tea tree oil; sensitisation possible."},
+  "lavandula angustifolia oil":{r:1,d:"Lavender oil; contains fragrance allergens."},
+  "citrus limon peel oil":{r:1,d:"Lemon oil; phototoxic in high concentration."},
+  "mica":{r:1,d:"Mineral shimmer; sourcing concerns."},
+  "bismuth oxychloride":{r:1,d:"Mineral shimmer; can irritate."},
+  "sodium fluoride":{r:1,d:"Toothpaste fluoride; effective, dose matters for children."},
+  // ---- further no known risk ----
+  "ascorbic acid":{r:0,d:"Vitamin C antioxidant."},
+  "ascorbyl glucoside":{r:0,d:"Stable vitamin C derivative."},
+  "magnesium ascorbyl phosphate":{r:0,d:"Stable vitamin C derivative."},
+  "adenosine":{r:0,d:"Smoothing active; well tolerated."},
+  "bisabolol":{r:0,d:"Soothing agent from chamomile."},
+  "centella asiatica extract":{r:0,d:"Soothing plant extract."},
+  "madecassoside":{r:0,d:"Soothing centella derivative."},
+  "sodium pca":{r:0,d:"Natural moisturising factor."},
+  "betaine":{r:0,d:"Humectant from beet."},
+  "trehalose":{r:0,d:"Humectant sugar."},
+  "cholesterol":{r:0,d:"Skin-barrier lipid."},
+  "phytosphingosine":{r:0,d:"Skin-barrier lipid."},
+  "ceramide ap":{r:0,d:"Skin-barrier lipid."},
+  "ceramide eop":{r:0,d:"Skin-barrier lipid."},
+  "caprylic/capric triglyceride":{r:0,d:"Coconut-derived emollient."},
+  "isononyl isononanoate":{r:0,d:"Lightweight emollient ester."},
+  "cetyl alcohol":{r:0,d:"Fatty alcohol emollient (not drying)."},
+  "stearyl alcohol":{r:0,d:"Fatty alcohol emollient (not drying)."},
+  "argania spinosa kernel oil":{r:0,d:"Argan oil."},
+  "rosa canina fruit oil":{r:0,d:"Rosehip oil."},
+  "glycine soja oil":{r:0,d:"Soybean oil emollient."},
+  "prunus amygdalus dulcis oil":{r:0,d:"Sweet almond oil."},
+  "persea gratissima oil":{r:0,d:"Avocado oil."},
+  "oryza sativa bran oil":{r:0,d:"Rice bran oil."},
+  "camellia sinensis leaf extract":{r:0,d:"Green tea antioxidant."},
+  "avena sativa kernel flour":{r:0,d:"Colloidal oatmeal; soothing."},
+  "sodium cocoyl isethionate":{r:0,d:"Mild sulphate-free cleanser."},
+  "coco-glucoside":{r:0,d:"Mild sugar-based surfactant."},
+  "decyl glucoside":{r:0,d:"Mild sugar-based surfactant."},
+  "lauryl glucoside":{r:0,d:"Mild sugar-based surfactant."},
+  "sodium lauroyl sarcosinate":{r:0,d:"Mild cleanser."},
+  "hydrolyzed hyaluronic acid":{r:0,d:"Low-weight hydrating humectant."},
+  "sodium citrate":{r:0,d:"pH buffer; no known risk."},
+  "tocopheryl linoleate":{r:0,d:"Vitamin E derivative."},
+  "zea mays starch":{r:0,d:"Corn starch; absorbent."},
+  "kaolin":{r:0,d:"Clay; absorbent."},
+  "maris sal":{r:0,d:"Sea salt."}
 };
 // alias → canonical key
 const INCI_ALIAS = {
@@ -1004,7 +1277,14 @@ const INCI_ALIAS = {
   "mit":"methylisothiazolinone","cmit":"methylchloroisothiazolinone",
   "vitamin e":"tocopherol","shea butter":"butyrospermum parkii butter",
   "alcohol denatured":"alcohol denat","sd alcohol":"alcohol denat",
-  "ppd":"p-phenylenediamine","aluminium chloride":"aluminium chlorohydrate"
+  "ppd":"p-phenylenediamine","aluminium chloride":"aluminium chlorohydrate",
+  "avobenzone":"butyl methoxydibenzoylmethane","octisalate":"ethylhexyl salicylate",
+  "d6":"cyclohexasiloxane","oakmoss":"evernia prunastri extract","treemoss":"evernia furfuracea extract",
+  "tea tree oil":"melaleuca alternifolia leaf oil","lavender oil":"lavandula angustifolia oil",
+  "vitamin c":"ascorbic acid","vitamin b3":"niacinamide","aloe vera":"aloe barbadensis leaf juice",
+  "coconut oil":"cocos nucifera oil","jojoba oil":"simmondsia chinensis seed oil",
+  "argan oil":"argania spinosa kernel oil","rosehip oil":"rosa canina fruit oil",
+  "sea salt":"maris sal","corn starch":"zea mays starch","paraffin oil":"paraffinum liquidum"
 };
 function normIng(s){
   return (s||"").toLowerCase()
@@ -1290,13 +1570,106 @@ function loading(){
     </div>`;
 }
 function notFound(code){
+  const cos = MODE==="cosmetic";
+  const addUrl = cos
+    ? `https://world.openbeautyfacts.org/cgi/product.pl?type=add&code=${code}`
+    : `https://world.openfoodfacts.org/cgi/product.pl?type=add&code=${code}`;
   body.innerHTML = `<div class="section"><div class="state">
-    <p class="em">Not in the database yet</p>
-    <p>No product found for <b style="font-family:'Space Mono',monospace">${code}</b>. If that number doesn't match the one printed under the barcode, it was a misread — scan again. If it does match, the product just isn't on Open Food Facts yet (anyone can add it).</p>
-    <button class="btn" id="rescanBtn" style="margin-top:18px;width:auto">Scan again</button>
-  </div></div>`;
+      <p class="em">Not in the database yet</p>
+      <p>Nothing found for <b style="font-family:'Space Mono',monospace">${code}</b> in any of the Open Facts databases. If that number doesn't match the one printed on the pack, it was a misread — scan again.</p>
+    </div>
+    <div class="nfacts">
+      <button class="btn" id="ownAdd" style="width:100%">Add it yourself</button>
+      <a class="btn ghost nfbtn" href="${addUrl}" target="_blank" rel="noopener">Add it to Open Food Facts</a>
+      <button class="btn ghost nfbtn" id="rescanBtn">Scan again</button>
+    </div>
+    <p class="nffoot">Adding it yourself takes a minute and works immediately on this phone. Adding it to Open Food Facts takes a little longer but fixes it for everyone — and it'll come back to you automatically.</p>
+    </div>`;
   const rb=document.getElementById("rescanBtn");
-  if(rb) rb.onclick=()=>{ showScan(); startScanner(); };
+  if(rb) rb.onclick=()=>{ showScanUI(); startScanner(); };
+  const ob=document.getElementById("ownAdd");
+  if(ob) ob.onclick=()=>renderOwnForm(code, MODE);
+}
+
+/* ---------- record a product yourself ---------- */
+function field(id,label,ph,val,type){
+  return `<label class="ofield"><span>${label}</span>
+    <input id="${id}" type="${type||"text"}" ${type==="number"?'inputmode="decimal" step="any"':""} placeholder="${ph||""}" value="${val!=null?String(val):""}"></label>`;
+}
+function renderOwnForm(code, kind, existing){
+  showResult();
+  const e = existing || ownGet(code) || {};
+  const cos = kind==="cosmetic";
+  const n = e.n || {};
+  body.innerHTML = `
+    <div class="phead"><p class="pbrand">your entry · ${cos?"cosmetic":"food"}</p>
+      <h2>${e.name?escapeHtml(e.name):"Add this product"}</h2>
+      <div class="barcode">${code}</div></div>
+    <div class="section">
+      <h3>Identity</h3>
+      ${field("of_name","Product name","e.g. Wholemeal loaf", e.name)}
+      ${field("of_brand","Brand","e.g. Warburtons", e.brand==="—"?"":e.brand)}
+    </div>
+    ${cos ? `
+    <div class="section">
+      <h3>Ingredients</h3>
+      <label class="ofield"><span>INCI list, separated by commas</span>
+        <textarea id="of_ing" rows="5" placeholder="Aqua, Glycerin, Parfum, Limonene…">${e.ing?escapeHtml(e.ing.join(", ")):""}</textarea></label>
+      <p class="nffoot" style="margin-top:10px">Copy it straight off the back of the pack. Each ingredient gets rated for risk.</p>
+    </div>` : `
+    <div class="section">
+      <h3>Nutrition per 100 g</h3>
+      <div class="ogrid">
+        ${field("of_kcal","Energy (kcal)","250", n.kcal!=null?Math.round(n.kcal):"", "number")}
+        ${field("of_fat","Fat (g)","10", n.fat, "number")}
+        ${field("of_sat","Saturates (g)","3", n.sat_fat, "number")}
+        ${field("of_carb","Carbs (g)","30", n.carbs, "number")}
+        ${field("of_sug","Sugars (g)","5", n.sugars, "number")}
+        ${field("of_fib","Fibre (g)","3", n.fiber, "number")}
+        ${field("of_pro","Protein (g)","8", n.proteins, "number")}
+        ${field("of_salt","Salt (g)","0.5", n.salt, "number")}
+      </div>
+      <label class="ocheck"><input type="checkbox" id="of_org" ${e.organic?"checked":""}> Certified organic</label>
+    </div>
+    <div class="section">
+      <h3>Ingredients <span style="text-transform:none;letter-spacing:0;font-family:Inter,sans-serif;color:var(--mono)">(optional)</span></h3>
+      <label class="ofield"><span>As printed on the pack</span>
+        <textarea id="of_ing" rows="4" placeholder="Wholemeal wheat flour, water, yeast, salt…">${e.ingredientsText?escapeHtml(e.ingredientsText):""}</textarea></label>
+    </div>`}
+    <div class="section">
+      <button class="btn" id="of_save" style="width:100%">Save entry</button>
+      ${ownGet(code)?`<button class="btn ghost nfbtn" id="of_del">Delete this entry</button>`:""}
+      <p class="nffoot">Saved on this phone only, included in your backups, and used instead of the database for this barcode.</p>
+    </div>`;
+
+  const num=id=>{ const v=parseFloat((document.getElementById(id)||{}).value); return isNaN(v)?null:v; };
+  document.getElementById("of_save").onclick=()=>{
+    const name=(document.getElementById("of_name").value||"").trim();
+    if(!name){ document.getElementById("of_name").focus(); return; }
+    const brand=(document.getElementById("of_brand").value||"").trim()||"—";
+    const ingRaw=(document.getElementById("of_ing")||{}).value||"";
+    let p;
+    if(cos){
+      p={code, kind:"cosmetic", _own:true, name, brand, img:"",
+         ing: ingRaw.split(/[,\n]+/).map(s=>normIng(s)).filter(Boolean), labels:[]};
+    }else{
+      const kcal=num("of_kcal"), salt=num("of_salt");
+      p={code, kind:"food", _own:true, name, brand, img:"",
+         organic: !!document.getElementById("of_org").checked,
+         nova:null, eco:null, quantity:"", serving:"",
+         ingredientsText: ingRaw.trim(), allergens:[], traces:[],
+         diet:{palm:null,gluten:null,lactose:null,vegan:null}, add:[], rawAdd:[],
+         n:{ kcal: kcal||0, energy_kj: (kcal||0)*4.184,
+             fat:num("of_fat"), carbs:num("of_carb"),
+             sugars:num("of_sug")||0, sat_fat:num("of_sat")||0,
+             fiber:num("of_fib")||0, proteins:num("of_pro")||0,
+             salt: salt, sodium: salt!=null ? salt*400 : 0, fruit:0 }};
+    }
+    ownPut(p);
+    showProduct(p);
+  };
+  const del=document.getElementById("of_del");
+  if(del) del.onclick=()=>{ ownDelete(code); showScanUI(); };
 }
 function lookupError(kind, code){
   const offline = kind==="offline";
@@ -1321,8 +1694,14 @@ function renderProduct(p){
   const pers = personalise(p, base);               // personal profile adjustment
   const shown = pers.total;                        // the number the person actually sees
   const sv = verdict(shown);
-  addHistory({code:p.code, name:p.name, brand:p.brand, score:shown, color:sv.color, t:Date.now(), nova:p.nova||null});
-  if(shown<50) addSwap({code:p.code, name:p.name, brand:p.brand, score:shown, color:sv.color, t:Date.now()});
+  // no nutrition figures at all means the score is meaningless — say so rather
+  // than presenting a flattering number built from absent data
+  const nn=p.n;
+  const thinData = (!nn.energy_kj && !nn.sugars && !nn.sat_fat && !nn.proteins && !nn.fiber && !nn.sodium);
+  if(!thinData){
+    addHistory({code:p.code, name:p.name, brand:p.brand, score:shown, color:sv.color, t:Date.now(), nova:p.nova||null});
+    if(shown<50) addSwap({code:p.code, name:p.name, brand:p.brand, score:shown, color:sv.color, t:Date.now()});
+  }
   const circ = 2*Math.PI*50;                       // r=50
   const off = circ*(1 - shown/100);
 
@@ -1341,7 +1720,6 @@ function renderProduct(p){
 
   const alt = (shown<50) ? findAlternative(p) : null;
   const n=p.n;
-  const thinData = (n.energy_kj===0 && n.sugars===0 && n.sat_fat===0 && n.proteins===0 && n.fiber===0 && n.sodium===0);
 
   body.innerHTML = `
     <div style="--v:${v.color}">
@@ -1354,6 +1732,7 @@ function renderProduct(p){
         </div>
       </div>
 
+      ${ownNote(p)}
       ${savedNote(p)}
       ${filterBanner}
 
@@ -1364,11 +1743,11 @@ function renderProduct(p){
             <circle class="fill" cx="56" cy="56" r="50" stroke-width="9"
               stroke-dasharray="${circ}" stroke-dashoffset="${circ}" data-off="${off}"/>
           </svg>
-          <div class="num"><b data-count="${shown}">0</b><small>/ 100</small></div>
+          <div class="num"><b data-count="${shown}">${thinData?"?":"0"}</b><small>/ 100</small></div>
         </div>
         <div class="verdict">
-          <div class="word">${sv.word}</div>
-          <div class="sub">${sv.sub}</div>
+          <div class="word">${thinData?"—":sv.word}</div>
+          <div class="sub">${thinData?"No nutrition figures recorded, so this can't be scored.":sv.sub}</div>
           ${pers.active&&pers.shift?`<div class="persnote">${pers.shift>0?"+":""}${pers.shift} from your priorities</div>`:""}
         </div>
       </div>
@@ -1378,7 +1757,7 @@ function renderProduct(p){
         ${breakBar("Nutritional quality", thinData?"no data":("Nutri-Score "+s.nut.grade), Math.round(s.nut.sub), nutColor, 60)}
         ${breakBar("Additives",p.add.length?p.add.length+" flagged":"none",Math.round(s.adv.sub),advColor,30)}
         ${breakBar("Organic",p.organic?"certified":"not labelled",Math.round(s.orgSub),p.organic?"var(--exc)":"var(--hair)",10)}
-        ${thinData?`<p class="datanote">⚠ Open Food Facts has no nutrition information for this item, so the nutrition portion can't be judged — treat this score as low-confidence.</p>`:""}
+        ${thinData?`<p class="datanote">⚠ No nutrition information recorded for this item, so it can't be scored.${p._own?" Tap Edit above to add the figures from the pack.":" You can add it on Open Food Facts to fix it for everyone."}</p>`:""}
       </div>
 
       <div class="section">
@@ -1402,9 +1781,9 @@ function renderProduct(p){
   // animate gauge + counter
   requestAnimationFrame(()=>{
     const fill=body.querySelector(".fill");
-    if(fill) fill.style.strokeDashoffset = fill.dataset.off;
+    if(fill && !thinData) fill.style.strokeDashoffset = fill.dataset.off;
     body.querySelectorAll(".track2 i").forEach(el=>{el.style.width=el.dataset.w+"%";});
-    animateCount(body.querySelector(".num b"), shown);
+    if(!thinData) animateCount(body.querySelector(".num b"), shown);
   });
 }
 
@@ -1489,6 +1868,12 @@ function renderPriorities(pers, base){
     <p class="nfoot">Set what matters to you on the home screen. Nothing is hidden — every adjustment is listed above.</p>
   </div>`;
 }
+/* ---------- your-own-entry notice ---------- */
+function ownNote(p){
+  if(!p._own) return "";
+  return `<div class="fbanner info"><span class="fico">&#9998;</span><div><b>Your entry</b><span>Recorded by you, not from the database. <button class="linkbtn" id="editOwn" data-code="${p.code}" data-kind="${p.kind||"food"}">Edit</button></span></div></div>`;
+}
+
 /* ---------- saved-copy notice ---------- */
 function savedNote(p){
   if(!p._saved) return "";
@@ -1606,6 +1991,7 @@ function renderCosmetic(p){
         </div>
       </div>
 
+      ${ownNote(p)}
       ${savedNote(p)}
       ${banner}
 
@@ -1799,19 +2185,57 @@ window.addEventListener("popstate", ()=>{
 function renderAny(p){ (p.kind==="cosmetic") ? renderCosmetic(p) : renderProduct(p); }
 function showProduct(p){ renderAny(p); registerScreen({t:"product", p}); }
 
+// The Open Facts family shares one schema, so a miss in one database can fall
+// through to its siblings: pet food for food, household products for cosmetics.
+const DBS = {
+  food:     [{host:"world.openfoodfacts.org",     map:"off"},
+             {host:"world.openpetfoodfacts.org",  map:"off"}],
+  cosmetic: [{host:"world.openbeautyfacts.org",   map:"obf"},
+             {host:"world.openproductsfacts.org", map:"obf"}]
+};
+async function fetchFrom(host, code, mapper){
+  const fields = mapper==="off" ? OFF_FIELDS : OBF_FIELDS;
+  const url = `https://${host}/api/v2/product/${code}.json?fields=${fields}`;
+  let res;
+  try{ res = await fetchWithTimeout(url, 9000); }
+  catch(e){ throw new Error(netKind()); }
+  if(res.status===404) throw new Error("notfound");
+  if(!res.ok) throw new Error("server");
+  let j;
+  try{ j = await res.json(); }
+  catch(e){ throw new Error("server"); }
+  if(!j || j.status===0 || !j.product) throw new Error("notfound");
+  return mapper==="off" ? mapOFF(j.product, code) : mapOBF(j.product, code);
+}
 async function tryFetch(code, kind){
-  let lastKind="server";
-  for(let attempt=0; attempt<2; attempt++){
-    try{
-      return {ok:true, product: kind==="cosmetic" ? await fetchOBF(code) : await fetchOFF(code)};
-    }catch(err){
-      lastKind = err.message||"server";
-      if(lastKind==="notfound") return {ok:false, kind:"notfound"};
-      if(attempt===0){ await sleep(700); continue; }
+  const dbs = DBS[kind] || DBS.food;
+  let sawNotFound=false, lastKind="server";
+  for(const db of dbs){
+    for(let attempt=0; attempt<2; attempt++){
+      try{ return {ok:true, product: await fetchFrom(db.host, code, db.map)}; }
+      catch(err){
+        lastKind = err.message||"server";
+        if(lastKind==="notfound"){ sawNotFound=true; break; }   // try the sibling database
+        if(attempt===0){ await sleep(700); continue; }
+      }
     }
   }
-  return {ok:false, kind:lastKind};
+  return {ok:false, kind: sawNotFound ? "notfound" : lastKind};
 }
+
+/* ============================================================
+   YOUR OWN PRODUCT ENTRIES
+   Nothing beats the database simply having the product — but when it
+   doesn't, you can record it yourself. Kept separately from the cache
+   so it's never evicted and is included in backups.
+   ============================================================ */
+const OWNKEY="verdict_own_v1";
+function loadOwn(){ try{ return JSON.parse(localStorage.getItem(OWNKEY)||"{}"); }catch(e){ return {}; } }
+function saveOwn(m){ try{ localStorage.setItem(OWNKEY, JSON.stringify(m)); }catch(e){} }
+function ownGet(code){ const m=loadOwn(); return m[code]||null; }
+function ownPut(p){ const m=loadOwn(); m[p.code]=p; saveOwn(m); }
+function ownDelete(code){ const m=loadOwn(); delete m[code]; saveOwn(m); }
+function ownCount(){ return Object.keys(loadOwn()).length; }
 
 /* ============================================================
    LOCAL PRODUCT CACHE
@@ -1868,6 +2292,10 @@ async function lookup(code, forceKind){
   const localC = COS_PANTRY.find(p=>p.code===code);
   const local = kind==="cosmetic" ? (localC||localF) : (localF||localC);
   if(local){ setTimeout(()=>showProduct(local),260); return; }
+
+  // your own entry for this barcode, if you made one
+  const own = ownGet(code);
+  if(own){ setTimeout(()=>showProduct(own),200); return; }
 
   // then anything scanned before — instant, and works with no connection
   const hit = cacheGet(code);
@@ -2026,7 +2454,12 @@ function submitQuery(raw){
 $("#lookupBtn").onclick=()=>submitQuery($("#codeInput").value);
 $("#codeInput").addEventListener("keydown",e=>{if(e.key==="Enter")submitQuery(e.target.value);});
 $("#backBtn").onclick=()=>{ if(navStack.length) history.back(); else showScanUI(); };
-body.addEventListener("click",e=>{const c=e.target.closest(".altcard");if(c)lookup(c.dataset.code);});
+body.addEventListener("click",e=>{
+  const ed=e.target.closest("#editOwn");
+  if(ed){ renderOwnForm(ed.dataset.code, ed.dataset.kind); return; }
+  const c=e.target.closest(".altcard");
+  if(c) lookup(c.dataset.code);
+});
 
 /* ---------- scan history (persists locally; in-memory fallback) ---------- */
 const HKEY="verdict_history_v1";
@@ -2495,14 +2928,15 @@ function stopScanner(){
    cleared by the browser or the OS. Export makes the data actually yours.
    ============================================================ */
 const DATA_KEYS = ["verdict_history_v1","verdict_swaps_v1","verdict_filters_v1","verdict_cfilters_v1",
-                   "verdict_prios_v1","verdict_mode_v1","verdict_lens_v1","verdict_theme_v1","verdict_install_hidden_v1"];
+                   "verdict_prios_v1","verdict_mode_v1","verdict_lens_v1","verdict_theme_v1","verdict_install_hidden_v1","verdict_own_v1"];
 
 function dataSummary(){
   const hist=loadHistory(), swaps=loadSwaps();
   const prios=loadPrios().length, filt=loadFilters().length+loadCFilters().length;
-  const saved=cacheCount();
+  const saved=cacheCount(), mine=ownCount();
   const bits=[`${hist.length} scan${hist.length===1?"":"s"}`];
   if(saved) bits.push(`${saved} saved offline`);
+  if(mine) bits.push(`${mine} of your own`);
   if(swaps.length) bits.push(`${swaps.length} to swap`);
   if(prios) bits.push(`${prios} priorit${prios===1?"y":"ies"}`);
   if(filt) bits.push(`${filt} filter${filt===1?"":"s"}`);
