@@ -210,6 +210,8 @@
   body.scanning .hint,
   body.scanning .filters,
   body.scanning #dataWrap,
+  body.scanning .prefs,
+  body.scanning .empty,
   body.scanning .recent,
   body.scanning .ios-install,
   body.scanning footer{display:none}
@@ -373,6 +375,34 @@
 
   /* personal priorities */
   .priofoot{font-size:11.5px;color:var(--mono);margin:12px 0 0;line-height:1.5}
+
+  /* --- home hierarchy: the scan card is the hero, settings recede --- */
+  #scanPanel{box-shadow:0 1px 2px rgba(22,33,27,.05), 0 18px 44px rgba(22,33,27,.10)}
+  :root[data-theme="dark"] #scanPanel{box-shadow:0 1px 2px rgba(0,0,0,.4), 0 18px 44px rgba(0,0,0,.45)}
+  .controls .btn.wide{padding:16px;font-size:15.5px;border-radius:14px}
+  .controls .btn.wide svg{width:19px;height:19px}
+
+  /* first-run empty state */
+  .empty{margin-top:14px;background:var(--card);border:1px dashed var(--hair);border-radius:20px;padding:22px}
+  .empty h3{font-family:"Space Grotesk",sans-serif;font-size:17px;margin:0 0 14px;letter-spacing:-.01em}
+  .steps{margin:0;padding:0;list-style:none;counter-reset:s}
+  .steps li{counter-increment:s;position:relative;padding:0 0 0 34px;margin-bottom:11px;font-size:13.5px;color:var(--ink-soft);line-height:1.5}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:23px;height:23px;border-radius:50%;
+    background:var(--paper);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:11.5px;color:var(--ink)}
+  .steps b{color:var(--ink)}
+  .emptyfoot{font-size:12.5px;color:var(--mono);margin:16px 0 0;line-height:1.55}
+
+  /* collapsible preferences group */
+  .prefs{margin-top:14px;background:var(--card);border:1px solid var(--hair);border-radius:20px;box-shadow:var(--shadow);overflow:hidden}
+  .prefshead{width:100%;display:flex;align-items:center;gap:10px;background:none;border:none;padding:16px 18px;cursor:pointer;text-align:left;color:var(--ink)}
+  .prefshead>span:first-child{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:15px}
+  .prefsmeta{flex:1;font-size:12px;color:var(--mono);text-align:right}
+  .prefshead .chev{width:18px;height:18px;color:var(--mono);flex:none;transition:transform .22s cubic-bezier(.2,.7,.3,1)}
+  .prefshead[aria-expanded="true"] .chev{transform:rotate(180deg)}
+  .prefsbody{padding:0 12px 12px}
+  /* panels inside the group are already-carded; flatten them */
+  .prefsbody .filters{margin-top:8px;box-shadow:none;border-color:var(--hair);background:var(--paper)}
   .datasum{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:14px;margin:0 0 12px}
   .datarow{display:flex;gap:8px}
   .datarow .btn{flex:1;gap:7px;padding:11px 10px;font-size:13px}
@@ -448,7 +478,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M4 21h16"/></svg>
         Install
       </button>
-      <button class="installx" id="installX" aria-label="Already installed — hide this" title="Already installed? Hide this">&times;</button>
+      <button class="installx" id="installX" aria-label="Hide the install button permanently" title="Already installed? Hide this for good">&times;</button>
     </div>
     <div class="tag" id="tag">personal build</div>
   </header>
@@ -515,6 +545,38 @@
     </div>
   </section>
 
+  <section class="empty" id="emptyState" hidden>
+    <h3>Nothing scanned yet</h3>
+    <ol class="steps">
+      <li><b>Scan</b> a barcode or search by name</li>
+      <li>Get a <b>0–100 score</b> with the nutrition, additives and processing behind it</li>
+      <li>See <b>exactly why</b> — every point is explained, never a black box</li>
+    </ol>
+    <p class="emptyfoot">What you scan builds up here: recent items, things worth swapping, and whether your shopping is improving.</p>
+  </section>
+
+  <section class="recent" id="trendsWrap" hidden>
+    <div class="recenthead"><p class="lbl">Your trends</p><span class="trendcount" id="trendCount"></span></div>
+    <div id="trendsBody"></div>
+  </section>
+
+  <section class="recent" id="swapWrap" hidden>
+    <div class="recenthead"><p class="lbl">Worth swapping</p><button class="clearbtn" id="clearSwap">Clear</button></div>
+    <div id="swapList"></div>
+  </section>
+
+  <section class="recent" id="recentWrap" hidden>
+    <div class="recenthead"><p class="lbl">Recent scans</p><button class="clearbtn" id="clearHist">Clear</button></div>
+    <div id="recentList"></div>
+  </section>
+
+  <section class="prefs" id="prefsGroup">
+    <button class="prefshead" id="prefsToggle" aria-expanded="false">
+      <span>Preferences</span>
+      <span class="prefsmeta" id="prefsMeta"></span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="prefsbody" id="prefsBody" hidden>
   <section class="filters" id="filtersWrap">
     <p class="lbl" id="filtersLbl">Things I avoid <span class="lblnote">— every scan gets checked against these</span></p>
     <div class="chiprow" id="filterChips"></div>
@@ -524,11 +586,6 @@
     <p class="lbl">My priorities <span class="lblnote">— tunes the score to what matters to you</span></p>
     <div class="chiprow" id="prioChips"></div>
     <p class="priofoot" id="prioFoot"></p>
-  </section>
-
-  <section class="recent" id="swapWrap" hidden>
-    <div class="recenthead"><p class="lbl">Worth swapping</p><button class="clearbtn" id="clearSwap">Clear</button></div>
-    <div id="swapList"></div>
   </section>
 
   <section class="filters" id="dataWrap">
@@ -547,15 +604,7 @@
     </div>
     <p class="priofoot" id="dataMsg"></p>
   </section>
-
-  <section class="recent" id="trendsWrap" hidden>
-    <div class="recenthead"><p class="lbl">Your trends</p><span class="trendcount" id="trendCount"></span></div>
-    <div id="trendsBody"></div>
-  </section>
-
-  <section class="recent" id="recentWrap" hidden>
-    <div class="recenthead"><p class="lbl">Recent scans</p><button class="clearbtn" id="clearHist">Clear</button></div>
-    <div id="recentList"></div>
+    </div>
   </section>
 
   <p class="hint" id="hint"><b>Camera not needed to try it</b> — tap a pantry item above.</p>
@@ -1731,7 +1780,7 @@ function renderScreen(view){
 function showScanUI(){
   navStack=[];
   result.classList.remove("on"); home.style.display="";
-  stopScanner(); renderHistory(); renderSwaps(); renderTrends(); refreshDataPanel();
+  stopScanner(); renderHistory(); renderSwaps(); renderTrends(); refreshDataPanel(); renderEmptyState(); renderPrefs();
 }
 function setBackLabel(){
   const btn=document.getElementById("backBtn");
@@ -1879,6 +1928,8 @@ function applyMode(){
   renderFilterChips();
   renderPrioChips();
   renderTrends();
+  renderEmptyState();
+  renderPrefs();
   $("#priosWrap").hidden = cos;      // priorities are nutrition-based; cosmetics use filters
 }
 $("#modeFood").onclick=()=>{ MODE="food"; saveMode(MODE); applyMode(); };
@@ -2008,7 +2059,7 @@ function renderHistory(){
     </button>`).join("");
 }
 $("#recentList").addEventListener("click",e=>{const r=e.target.closest(".histrow");if(r)lookup(r.dataset.code, r.dataset.kind);});
-$("#clearHist").onclick=()=>{saveHistory([]);renderHistory();renderTrends();};
+$("#clearHist").onclick=()=>{saveHistory([]);renderHistory();renderTrends();renderEmptyState();};
 renderHistory();
 
 /* ---------- trends over time ---------- */
@@ -2089,6 +2140,32 @@ function renderTrends(){
       ? "Early days — a handful of scans isn't a shopping habit. This gets meaningful after a few weeks."
       : "Based on what you've actually scanned, not what you buy overall — scanning is naturally biased toward things you're unsure about."}${t.upf==null?" Processing data wasn't available for these products.":(t.novaCount<t.count?` Ultra-processed share covers ${t.novaCount} of ${t.count} scans.`:"")}</p>`;
 }
+/* ---------- preferences group + empty state ---------- */
+const PGKEY="verdict_prefsopen_v1";
+function prefsOpen(){ try{return localStorage.getItem(PGKEY)==="1";}catch(e){return false;} }
+function setPrefsOpen(v){ try{localStorage.setItem(PGKEY, v?"1":"0");}catch(e){} }
+function renderPrefs(){
+  const open=prefsOpen();
+  const btn=$("#prefsToggle"), bodyEl=$("#prefsBody");
+  if(!btn||!bodyEl) return;
+  btn.setAttribute("aria-expanded", open?"true":"false");
+  bodyEl.hidden=!open;
+  // tell the user what's configured without making them open it
+  const cos = MODE==="cosmetic";
+  const f=(cos?loadCFilters():loadFilters()).length, pr=loadPrios().length;
+  const bits=[];
+  if(f) bits.push(`${f} filter${f===1?"":"s"}`);
+  if(!cos && pr) bits.push(`${pr} priorit${pr===1?"y":"ies"}`);
+  $("#prefsMeta").textContent = open ? "" : (bits.length ? bits.join(" · ") : "filters, priorities, backup");
+}
+$("#prefsToggle").onclick=()=>{ setPrefsOpen(!prefsOpen()); renderPrefs(); };
+
+function renderEmptyState(){
+  const el=$("#emptyState");
+  if(!el) return;
+  el.hidden = loadHistory().length>0;
+}
+
 /* ---------- personal priorities ---------- */
 const PKEY="verdict_prios_v1";
 let memPrios=[];
@@ -2105,7 +2182,7 @@ function renderPrioChips(){
     b.onclick=()=>{
       const cur=loadPrios();
       savePrios(cur.includes(f.key) ? cur.filter(k=>k!==f.key) : [...cur,f.key]);
-      renderPrioChips();
+      renderPrioChips(); renderPrefs();
     };
     el.appendChild(b);
   });
@@ -2136,7 +2213,7 @@ function renderFilterChips(){
       const cur = cos ? loadCFilters() : loadFilters();
       const next = cur.includes(f.key) ? cur.filter(k=>k!==f.key) : [...cur,f.key];
       cos ? saveCFilters(next) : saveFilters(next);
-      renderFilterChips();
+      renderFilterChips(); renderPrefs();
     };
     el.appendChild(b);
   });
@@ -2418,7 +2495,7 @@ function stopScanner(){
    cleared by the browser or the OS. Export makes the data actually yours.
    ============================================================ */
 const DATA_KEYS = ["verdict_history_v1","verdict_swaps_v1","verdict_filters_v1","verdict_cfilters_v1",
-                   "verdict_prios_v1","verdict_mode_v1","verdict_lens_v1","verdict_theme_v1"];
+                   "verdict_prios_v1","verdict_mode_v1","verdict_lens_v1","verdict_theme_v1","verdict_install_hidden_v1"];
 
 function dataSummary(){
   const hist=loadHistory(), swaps=loadSwaps();
@@ -2542,7 +2619,8 @@ applyTheme();
    ============================================================ */
 const installBtn=$("#installBtn"), installWrap=$("#installWrap"), iosInstall=$("#iosInstall"), installHelp=$("#installHelp"), installHelpBody=$("#installHelpBody");
 let deferredPrompt=null;
-const IKEY="verdict_installed_v1";
+const IKEY="verdict_installed_v1";      // detected as installed (can be invalidated)
+const DKEY="verdict_install_hidden_v1"; // user said "stop asking" — never auto-cleared
 
 // standalone must be checked live, not once at load — a PWA can be launched
 // into standalone after the page was first opened in a tab
@@ -2554,6 +2632,8 @@ function isStandalone(){
 }
 function markInstalled(){ try{localStorage.setItem(IKEY,"1");}catch(e){} }
 function wasInstalled(){ try{return localStorage.getItem(IKEY)==="1";}catch(e){return false;} }
+function markDismissed(){ try{localStorage.setItem(DKEY,"1");}catch(e){} }
+function wasDismissed(){ try{return localStorage.getItem(DKEY)==="1";}catch(e){return false;} }
 let standalone = isStandalone();
 if(standalone) markInstalled();      // remember, so the browser tab stops nagging too
 
@@ -2566,10 +2646,10 @@ function plat(){
 }
 function refreshInstallUI(){
   standalone = isStandalone();
-  const installed = standalone || wasInstalled();
-  installWrap.hidden = installed;
-  $("#tag").style.display = installed ? "" : "none";
-  if(installed){ iosInstall.hidden=true; installHelp.hidden=true; }
+  const hide = standalone || wasInstalled() || wasDismissed();
+  installWrap.hidden = hide;
+  $("#tag").style.display = hide ? "" : "none";
+  if(hide){ iosInstall.hidden=true; installHelp.hidden=true; }
 }
 refreshInstallUI();
 
@@ -2590,8 +2670,8 @@ if(navigator.getInstalledRelatedApps){
 // signal that a previous "installed" flag was wrong (e.g. app was removed).
 window.addEventListener("beforeinstallprompt",(e)=>{
   e.preventDefault(); deferredPrompt=e;
-  try{localStorage.removeItem(IKEY);}catch(err){}
-  if(!isStandalone()){ installWrap.hidden=false; $("#tag").style.display="none"; }
+  try{localStorage.removeItem(IKEY);}catch(err){}   // detection was wrong — but a dismissal still stands
+  if(!isStandalone() && !wasDismissed()){ installWrap.hidden=false; $("#tag").style.display="none"; }
 });
 
 installBtn.onclick=async()=>{
@@ -2609,7 +2689,7 @@ installBtn.onclick=async()=>{
 
 // "already installed" escape hatch — some Android setups create a home-screen
 // shortcut that opens in a normal tab, where the page can't detect the install
-$("#installX").onclick=()=>{ markInstalled(); refreshInstallUI(); };
+$("#installX").onclick=()=>{ markDismissed(); refreshInstallUI(); };
 
 function showInstallHelp(){
   const {isIOS,isAndroid}=plat();
