@@ -209,6 +209,7 @@
   body.scanning .field,
   body.scanning .hint,
   body.scanning .filters,
+  body.scanning #dataWrap,
   body.scanning .recent,
   body.scanning .ios-install,
   body.scanning footer{display:none}
@@ -371,6 +372,10 @@
 
   /* personal priorities */
   .priofoot{font-size:11.5px;color:var(--mono);margin:12px 0 0;line-height:1.5}
+  .datasum{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:14px;margin:0 0 12px}
+  .datarow{display:flex;gap:8px}
+  .datarow .btn{flex:1;gap:7px;padding:11px 10px;font-size:13px}
+  .datarow .btn svg{width:15px;height:15px;flex:none}
   .persnote{display:inline-block;margin-top:7px;font-family:"Space Mono",monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);background:var(--paper);padding:4px 9px;border-radius:999px}
   .prow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--hair)}
   .prow.head{border-top:none;padding-top:0}
@@ -523,6 +528,23 @@
   <section class="recent" id="swapWrap" hidden>
     <div class="recenthead"><p class="lbl">Worth swapping</p><button class="clearbtn" id="clearSwap">Clear</button></div>
     <div id="swapList"></div>
+  </section>
+
+  <section class="filters" id="dataWrap">
+    <p class="lbl">Your data <span class="lblnote">— stays on this device unless you export it</span></p>
+    <p class="datasum" id="dataSum"></p>
+    <div class="datarow">
+      <button class="btn ghost" id="exportBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M4 21h16"/></svg>
+        Export backup
+      </button>
+      <button class="btn ghost" id="importBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M8 7l4-4 4 4M4 21h16"/></svg>
+        Restore
+      </button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </div>
+    <p class="priofoot" id="dataMsg"></p>
   </section>
 
   <section class="recent" id="trendsWrap" hidden>
@@ -1168,7 +1190,7 @@ const $ = s=>document.querySelector(s);
 const scanPanel=$("#scanPanel"), result=$("#result"), body=$("#resultBody"), hint=$("#hint"), home=$("#home");
 
 function showResult(){home.style.display="none";result.classList.add("on");window.scrollTo({top:0,behavior:"smooth"});}
-function showScan(){result.classList.remove("on");home.style.display="";stopScanner();renderHistory();renderSwaps();renderTrends();}
+function showScan(){ showScanUI(); }
 
 function loading(){
   showResult();
@@ -1647,7 +1669,61 @@ function escapeHtml(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
    FLOW
    ============================================================ */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+/* ============================================================
+   IN-APP NAVIGATION — so the phone's Back button/gesture steps
+   through screens instead of leaving the app
+   ============================================================ */
+let navStack=[];        // screens stacked above the home screen
+let isReplay=false;     // true while re-rendering on Back: don't re-record history
+
+function pushScreen(view){
+  navStack.push(view);
+  try{ history.pushState({v:navStack.length},""); }catch(e){}
+}
+function replaceScreen(view){
+  if(!navStack.length) return pushScreen(view);
+  navStack[navStack.length-1]=view;
+  try{ history.replaceState({v:navStack.length},""); }catch(e){}
+}
+// a product opened straight from the camera replaces the camera screen,
+// so Back goes home rather than reopening the viewfinder
+function registerScreen(view){
+  const top=navStack[navStack.length-1];
+  if(top && (top.t==="scan" || top.t==="loading")) replaceScreen(view);
+  else pushScreen(view);
+  setBackLabel();
+}
+function renderScreen(view){
+  isReplay=true;
+  try{
+    if(view.t==="product") renderAny(view.p);
+    else if(view.t==="search") renderSearchResults(view.term, view.list, view.kind);
+    else if(view.t==="loading"){ showScanUI(); return; }
+  }catch(e){ showScanUI(); }
+  finally{ isReplay=false; }
+  setBackLabel();
+}
+function showScanUI(){
+  navStack=[];
+  result.classList.remove("on"); home.style.display="";
+  stopScanner(); renderHistory(); renderSwaps(); renderTrends(); refreshDataPanel();
+}
+function setBackLabel(){
+  const btn=document.getElementById("backBtn");
+  if(!btn) return;
+  const beneath=navStack[navStack.length-2];
+  btn.lastChild.textContent = beneath && beneath.t==="search" ? " Back to results" : " Scan another";
+}
+window.addEventListener("popstate", ()=>{
+  if(scanning) stopScanner();
+  navStack.pop();
+  const top=navStack[navStack.length-1];
+  if(top){ showResult(); renderScreen(top); }
+  else { showScanUI(); }
+});
+
 function renderAny(p){ (p.kind==="cosmetic") ? renderCosmetic(p) : renderProduct(p); }
+function showProduct(p){ renderAny(p); registerScreen({t:"product", p}); }
 
 async function tryFetch(code, kind){
   let lastKind="server";
@@ -1668,21 +1744,22 @@ async function lookup(code, forceKind){
   if(!code){return;}
   const kind = forceKind || MODE;
   loading();
+  if(!isReplay) registerScreen({t:"loading"});
   // built-in samples first (instant, always work offline)
   const localF = PANTRY.find(p=>p.code===code);
   const localC = COS_PANTRY.find(p=>p.code===code);
   const local = kind==="cosmetic" ? (localC||localF) : (localF||localC);
-  if(local){ setTimeout(()=>renderAny(local),260); return; }
+  if(local){ setTimeout(()=>showProduct(local),260); return; }
 
   let r = await tryFetch(code, kind);
-  if(r.ok){ renderAny(r.product); return; }
+  if(r.ok){ showProduct(r.product); return; }
 
   // not in the chosen database? try the other one before giving up —
   // easy to scan a shampoo while still in Food mode
   if(r.kind==="notfound"){
     const other = kind==="cosmetic" ? "food" : "cosmetic";
     const r2 = await tryFetch(code, other);
-    if(r2.ok){ renderAny(r2.product); return; }
+    if(r2.ok){ showProduct(r2.product); return; }
     notFound(code); return;
   }
   lookupError(r.kind, code);
@@ -1789,9 +1866,11 @@ function renderSearchResults(term, list, kind){
 async function runSearch(term){
   const kind = MODE;
   searchLoading(term);
+  registerScreen({t:"loading"});
   try{
     const list = await searchProducts(term, kind);
     renderSearchResults(term, list, kind);
+    replaceScreen({t:"search", term, list, kind});
   }catch(err){
     const k = err.message==="offline" ? "offline" : "server";
     body.innerHTML = `<div class="section"><div class="state">
@@ -1814,7 +1893,7 @@ function submitQuery(raw){
 
 $("#lookupBtn").onclick=()=>submitQuery($("#codeInput").value);
 $("#codeInput").addEventListener("keydown",e=>{if(e.key==="Enter")submitQuery(e.target.value);});
-$("#backBtn").onclick=showScan;
+$("#backBtn").onclick=()=>{ if(navStack.length) history.back(); else showScanUI(); };
 body.addEventListener("click",e=>{const c=e.target.closest(".altcard");if(c)lookup(c.dataset.code);});
 
 /* ---------- scan history (persists locally; in-memory fallback) ---------- */
@@ -1823,6 +1902,7 @@ let memHistory=[];
 function loadHistory(){ try{return JSON.parse(localStorage.getItem(HKEY)||"[]");}catch(e){return memHistory;} }
 function saveHistory(list){ memHistory=list; try{localStorage.setItem(HKEY,JSON.stringify(list));}catch(e){} }
 function addHistory(entry){
+  if(isReplay) return;
   const list=loadHistory().filter(x=>x.code!==entry.code);
   list.unshift(entry);
   saveHistory(list.slice(0,200));   // long tail powers trends; the list shows the newest 25
@@ -2001,6 +2081,7 @@ let memSwaps=[];
 function loadSwaps(){ try{return JSON.parse(localStorage.getItem(SKEY)||"[]");}catch(e){return memSwaps;} }
 function saveSwaps(list){ memSwaps=list; try{localStorage.setItem(SKEY,JSON.stringify(list));}catch(e){} }
 function addSwap(entry){
+  if(isReplay) return;
   const list=loadSwaps().filter(x=>x.code!==entry.code);
   list.unshift(entry);
   saveSwaps(list.slice(0,25));
@@ -2032,7 +2113,7 @@ applyMode();   // sets chips, filters and copy for the saved mode
 /* ---------- camera scanner ---------- */
 let scanner=null, scanning=false, detector=null, rafId=null, stream=null, track=null, cams=[], camIdx=0, torchOn=false;
 const scanBtn=$("#scanBtn"), scanLabel=$("#scanLabel"), reader=$("#reader");
-scanBtn.onclick=async()=>{ scanning ? stopScanner() : startScanner(); };
+scanBtn.onclick=async()=>{ if(scanning){ if(navStack.length) history.back(); else stopScanner(); } else startScanner(); };
 
 const camNote=$("#camNote");
 function showCamNote(kind){
@@ -2055,6 +2136,7 @@ async function startScanner(){
     showCamNote("insecure"); return;
   }
   reader.classList.add("on"); scanLabel.textContent="Stop camera"; scanning=true;
+  pushScreen({t:"scan"});
   document.body.classList.add("scanning");
   window.scrollTo({top:0,behavior:"auto"});
   lastSeen=null; seenCount=0;
@@ -2249,6 +2331,94 @@ function stopScanner(){
   const cam=document.getElementById("cam"); if(cam)cam.srcObject=null;
   if(scanner){scanner.stop().then(()=>scanner.clear()).catch(()=>{});scanner=null;}
 }
+
+/* ============================================================
+   BACKUP — everything lives in this browser's storage, which can be
+   cleared by the browser or the OS. Export makes the data actually yours.
+   ============================================================ */
+const DATA_KEYS = ["verdict_history_v1","verdict_swaps_v1","verdict_filters_v1","verdict_cfilters_v1",
+                   "verdict_prios_v1","verdict_mode_v1","verdict_lens_v1","verdict_theme_v1"];
+
+function dataSummary(){
+  const hist=loadHistory(), swaps=loadSwaps();
+  const prios=loadPrios().length, filt=loadFilters().length+loadCFilters().length;
+  const bits=[`${hist.length} scan${hist.length===1?"":"s"}`];
+  if(swaps.length) bits.push(`${swaps.length} to swap`);
+  if(prios) bits.push(`${prios} priorit${prios===1?"y":"ies"}`);
+  if(filt) bits.push(`${filt} filter${filt===1?"":"s"}`);
+  return bits.join(" · ");
+}
+function refreshDataPanel(msg){
+  const el=$("#dataSum"); if(el) el.textContent=dataSummary();
+  const m=$("#dataMsg");
+  if(m) m.textContent = msg || "Export writes a small file you can keep or move to another phone. Restore merges it back in.";
+}
+
+function exportData(){
+  const payload={app:"verdict", format:1, exported:new Date().toISOString(), data:{}};
+  DATA_KEYS.forEach(k=>{ try{ const v=localStorage.getItem(k); if(v!==null) payload.data[k]=v; }catch(e){} });
+  try{
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`verdict-backup-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    refreshDataPanel("Backup saved to your downloads. Keep it somewhere safe — it's the only copy outside this browser.");
+  }catch(e){
+    refreshDataPanel("Couldn't create the file. Your browser may be blocking downloads.");
+  }
+}
+
+// merge rather than overwrite: restoring an old backup shouldn't delete newer scans
+function mergeLists(existing, incoming, cap){
+  const out=[], seen=new Set();
+  [...existing, ...incoming]
+    .filter(x=>x && x.code)
+    .sort((a,b)=>(b.t||0)-(a.t||0))
+    .forEach(x=>{ if(!seen.has(x.code)){ seen.add(x.code); out.push(x); } });
+  return out.slice(0, cap);
+}
+function importData(json){
+  let payload;
+  try{ payload=JSON.parse(json); }
+  catch(e){ refreshDataPanel("That file isn't readable — it should be a Verdict backup file."); return; }
+  if(!payload || payload.app!=="verdict" || !payload.data){
+    refreshDataPanel("That doesn't look like a Verdict backup."); return;
+  }
+  const d=payload.data;
+  let restored=0;
+  const parse=(k,fallback)=>{ try{ return d[k]!=null ? JSON.parse(d[k]) : fallback; }catch(e){ return fallback; } };
+
+  // lists merge; settings replace
+  const inHist  = parse("verdict_history_v1", []);
+  const inSwaps = parse("verdict_swaps_v1", []);
+  if(Array.isArray(inHist)  && inHist.length){  saveHistory(mergeLists(loadHistory(), inHist, 200)); restored+=inHist.length; }
+  if(Array.isArray(inSwaps) && inSwaps.length){ saveSwaps(mergeLists(loadSwaps(), inSwaps, 25)); }
+  const inPrios=parse("verdict_prios_v1",null);   if(Array.isArray(inPrios)) savePrios(inPrios);
+  const inFilt =parse("verdict_filters_v1",null); if(Array.isArray(inFilt))  saveFilters(inFilt);
+  const inCFilt=parse("verdict_cfilters_v1",null);if(Array.isArray(inCFilt)) saveCFilters(inCFilt);
+  if(d.verdict_theme_v1){ saveTheme(d.verdict_theme_v1); applyTheme(); }
+  if(d.verdict_mode_v1){ MODE = d.verdict_mode_v1==="cosmetic"?"cosmetic":"food"; saveMode(MODE); }
+
+  applyMode(); renderHistory(); renderSwaps(); renderTrends();
+  const when = payload.exported ? new Date(payload.exported).toLocaleDateString() : "an earlier date";
+  refreshDataPanel(`Restored from a backup made ${when}. ${restored} scan${restored===1?"":"s"} merged in — nothing newer was overwritten.`);
+}
+
+$("#exportBtn").onclick=exportData;
+$("#importBtn").onclick=()=>$("#importFile").click();
+$("#importFile").addEventListener("change",e=>{
+  const f=e.target.files && e.target.files[0];
+  if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>importData(String(r.result||""));
+  r.onerror=()=>refreshDataPanel("Couldn't read that file.");
+  r.readAsText(f);
+  e.target.value="";     // allow re-picking the same file
+});
+refreshDataPanel();
 
 /* ============================================================
    THEME — follows the system, with a manual override
