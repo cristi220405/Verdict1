@@ -80,6 +80,11 @@
   .scanhead{padding:22px 22px 4px}
   .kicker{font-family:"Space Mono",monospace;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--mono);margin:0 0 8px}
   .scanhead h1{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:26px;line-height:1.15;letter-spacing:-.02em;margin:0 0 6px}
+  .modeswitch{display:flex;gap:4px;background:var(--paper);border:1px solid var(--hair);border-radius:999px;padding:4px;margin-bottom:16px}
+  .modebtn{flex:1;border:none;background:none;border-radius:999px;padding:9px 10px;font-family:"Inter",sans-serif;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:background .15s,color .15s}
+  .modebtn[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+  .modebtn:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
+  .lblnote{text-transform:none;letter-spacing:0;font-family:"Inter",sans-serif;color:var(--mono)}
   .scanhead p{color:var(--ink-soft);font-size:14px;margin:0 0 18px;max-width:34ch}
 
   #reader{width:100%;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);display:none;background:#0d130f;position:relative;overflow:hidden}
@@ -136,6 +141,19 @@
   .dot{width:8px;height:8px;border-radius:50%;flex:none}
 
   .hint{font-size:12px;color:var(--mono);margin:14px 2px 0;text-align:center}
+  /* while the camera is live, collapse everything else so the viewfinder is on screen */
+  body.scanning .scanhead,
+  body.scanning .samples,
+  body.scanning .divider,
+  body.scanning .field,
+  body.scanning .hint,
+  body.scanning .filters,
+  body.scanning .recent,
+  body.scanning .ios-install,
+  body.scanning footer{display:none}
+  body.scanning #reader{border-top:none}
+  body.scanning #reader video{max-height:72vh}
+  body.scanning .controls{padding:14px 22px 18px}
   .hint b{color:var(--ink-soft);font-weight:600}
   .camnote{margin:14px 0 0;background:var(--card);border:1px solid var(--hair);border-left:3px solid var(--poor);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow)}
   .camnote h4{font-family:"Space Grotesk",sans-serif;font-size:14px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
@@ -241,6 +259,31 @@
   .why b{color:var(--ink);font-weight:600}
   .datanote{font-size:12.5px;color:var(--poor);background:#FCF1E1;border-radius:10px;padding:10px 12px;margin:14px 0 0;line-height:1.5}
 
+  /* nutrition table */
+  .nrow{display:flex;align-items:baseline;gap:10px;padding:9px 0;border-top:1px solid var(--hair)}
+  .nrow:first-of-type{border-top:none;padding-top:0}
+  .nrow.ind .nname{padding-left:14px;color:var(--ink-soft);font-weight:500}
+  .nname{flex:1;min-width:0;font-size:13.5px;font-weight:600}
+  .nval{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:13.5px;text-align:right;white-space:nowrap}
+  .nval small{display:block;font-family:"Space Mono",monospace;font-size:10px;color:var(--mono);font-weight:400}
+  .ntl{width:66px;text-align:right;flex:none}
+  .tl{display:inline-block;font-size:10px;font-family:"Space Mono",monospace;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:#fff;padding:3px 7px;border-radius:999px}
+  .nfoot{font-size:11.5px;color:var(--mono);margin:14px 0 0;line-height:1.5}
+
+  /* NOVA processing */
+  .novarow{display:flex;gap:12px;align-items:flex-start}
+  .novabadge{flex:none;color:#fff;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:12px;padding:7px 10px;border-radius:10px;letter-spacing:.02em}
+  .novat{font-weight:600;font-size:13.5px;line-height:1.3}
+  .novad{font-size:12.5px;color:var(--ink-soft);margin-top:2px;line-height:1.5}
+  .pips{display:flex;gap:5px;margin-top:14px}
+  .pip{height:5px;flex:1;border-radius:99px}
+
+  /* allergens */
+  .alrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
+  .allbl{font-family:"Space Mono",monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--mono);margin-right:2px}
+  .altag{font-size:12px;font-weight:600;background:#FBEAE7;color:var(--bad);padding:4px 9px;border-radius:999px}
+  .altag.soft{background:var(--paper);color:var(--ink-soft);font-weight:500}
+
   .alt .althead{display:flex;align-items:center;gap:8px;margin-bottom:14px}
   .alt .althead h3{margin:0}
   .altcard{display:flex;align-items:center;gap:13px;padding:13px;border:1px solid var(--hair);border-radius:14px;background:var(--paper);cursor:pointer;transition:border-color .15s;width:100%;text-align:left}
@@ -300,9 +343,13 @@
   <div id="home">
   <section class="panel" id="scanPanel">
     <div class="scanhead">
+      <div class="modeswitch" role="tablist">
+        <button class="modebtn" id="modeFood" role="tab" aria-selected="true">Food</button>
+        <button class="modebtn" id="modeCos" role="tab" aria-selected="false">Cosmetics</button>
+      </div>
       <p class="kicker">scan · look up · decide</p>
-      <h1>Read the back of the box.</h1>
-      <p>Point your camera at a barcode, or type it in. Verdict scores the product 0–100 on nutrition, additives, and organic — and tells you why.</p>
+      <h1 id="scanTitle">Read the back of the box.</h1>
+      <p id="scanIntro">Point your camera at a barcode, or type it in. Verdict scores the product 0–100 on nutrition, additives, and organic — and tells you why.</p>
     </div>
 
     <div id="reader">
@@ -336,13 +383,13 @@
     </div>
 
     <div class="samples">
-      <p class="lbl">Or try one from the pantry</p>
+      <p class="lbl" id="samplesLbl">Or try one from the pantry</p>
       <div class="chiprow" id="chips"></div>
     </div>
   </section>
 
   <section class="filters" id="filtersWrap">
-    <p class="lbl">Things I avoid <span style="text-transform:none;letter-spacing:0;font-family:'Inter',sans-serif;color:var(--mono)">— every scan gets checked against these</span></p>
+    <p class="lbl" id="filtersLbl">Things I avoid <span class="lblnote">— every scan gets checked against these</span></p>
     <div class="chiprow" id="filterChips"></div>
   </section>
 
@@ -528,6 +575,39 @@ const PANTRY = [
    diet:{palm:false,gluten:true,lactose:false,vegan:true}}
 ];
 
+/* fill in the richer detail fields for the built-in samples (live products get
+   these straight from Open Food Facts) */
+const PANTRY_EXTRA = {
+  "5449000000996":{nova:4, fat:0, carbs:10.6, serving:"330 ml can",
+    ing:"Carbonated water, sugar, colour (E150d), acidity regulator (phosphoric acid), natural flavourings including caffeine.", allergens:[]},
+  "3017620422003":{nova:4, fat:30.9, carbs:57.5, serving:"15 g",
+    ing:"Sugar, palm oil, hazelnuts (13%), skimmed milk powder (8.7%), fat-reduced cocoa (7.4%), emulsifier: lecithins (soya), vanillin.", allergens:["milk","nuts","soybeans"]},
+  "7622210449283":{nova:4, fat:20, carbs:71, serving:"3 biscuits (33 g)",
+    ing:"Wheat flour, sugar, palm oil, fat-reduced cocoa powder, glucose-fructose syrup, raising agents, salt, emulsifier: soya lecithin, flavouring.", allergens:["gluten","soybeans"]},
+  "3168930010265":{nova:3, fat:32, carbs:52, serving:"30 g",
+    ing:"Potatoes, sunflower oil, salt.", allergens:[]},
+  "5000108453680":{nova:1, fat:8, carbs:60, serving:"40 g",
+    ing:"Wholegrain rolled oats.", allergens:["gluten"]},
+  "3083681025255":{nova:1, fat:2.7, carbs:16, serving:"200 g",
+    ing:"Chickpeas, water, salt.", allergens:[]},
+  "3033490004743":{nova:3, fat:2.5, carbs:41, serving:"1 slice (40 g)",
+    ing:"Wholemeal wheat flour, water, yeast, salt, ascorbic acid.", allergens:["gluten"]},
+  "3095550005701":{nova:4, fat:1.2, carbs:84, serving:"30 g",
+    ing:"Maize, sugar, salt, barley malt extract, colours (E102, E160a), vitamins and minerals.", allergens:["gluten"]}
+};
+PANTRY.forEach(p=>{
+  const x = PANTRY_EXTRA[p.code] || {};
+  p.nova = x.nova || null;
+  p.serving = x.serving || "";
+  p.ingredientsText = x.ing || "";
+  p.allergens = x.allergens || [];
+  p.traces = [];
+  p.n.fat   = x.fat!=null ? x.fat : null;
+  p.n.carbs = x.carbs!=null ? x.carbs : null;
+  p.n.kcal  = p.n.energy_kj/4.184;
+  p.n.salt  = (p.n.sodium/1000)*2.5;      // sodium mg → salt g
+});
+
 /* ============================================================
    SCORING ENGINE
    ============================================================ */
@@ -584,6 +664,26 @@ function scoreProduct(p){
   total = Math.max(0, Math.min(100, Math.round(total)));
   return {total, nut, adv, orgSub};
 }
+/* ============================================================
+   UK FSA front-of-pack traffic lights (per 100 g / 100 ml)
+   ============================================================ */
+const FSA = {
+  solid:{ fat:[3,17.5], sat:[1.5,5], sugars:[5,22.5], salt:[0.3,1.5] },
+  drink:{ fat:[1.5,8.75], sat:[0.75,2.5], sugars:[2.5,11.25], salt:[0.3,0.75] }
+};
+function light(value, band){
+  if(value==null) return null;
+  if(value<=band[0]) return {k:"low",  label:"Low",    color:"var(--exc)"};
+  if(value> band[1]) return {k:"high", label:"High",   color:"var(--bad)"};
+  return                  {k:"med",  label:"Medium", color:"var(--poor)"};
+}
+const NOVA = {
+  1:{t:"Unprocessed or minimally processed", d:"Whole foods — the base of a healthy diet."},
+  2:{t:"Processed culinary ingredient", d:"Things like oils, butter, sugar and salt, used to cook with."},
+  3:{t:"Processed food", d:"Made by adding salt, sugar or oil to whole foods — tinned veg, cheese, fresh bread."},
+  4:{t:"Ultra-processed food", d:"Industrial formulations with additives and ingredients you wouldn't cook with at home."}
+};
+
 function verdict(score){
   if(score>=75)return {word:"Excellent", color:"var(--exc)", sub:"A product you can reach for without a second thought."};
   if(score>=50)return {word:"Good", color:"var(--good)", sub:"Fine for regular shopping — a couple of things to note."};
@@ -592,8 +692,168 @@ function verdict(score){
 }
 
 /* ============================================================
-   DIETARY FILTERS — personal preferences, checked per product
+   COSMETICS — INCI ingredient risk map + scorer
+   Risk: 0 none · 1 low · 2 moderate · 3 high
    ============================================================ */
+const INCI = {
+  // ---- high concern ----
+  "formaldehyde":{r:3,d:"Preservative classified as a human carcinogen."},
+  "dmdm hydantoin":{r:3,d:"Formaldehyde-releasing preservative."},
+  "imidazolidinyl urea":{r:3,d:"Formaldehyde-releasing preservative."},
+  "diazolidinyl urea":{r:3,d:"Formaldehyde-releasing preservative."},
+  "quaternium-15":{r:3,d:"Formaldehyde releaser; common contact allergen."},
+  "butylparaben":{r:3,d:"Paraben with the strongest endocrine-disruption evidence."},
+  "propylparaben":{r:3,d:"Paraben; suspected endocrine disruptor."},
+  "isobutylparaben":{r:3,d:"Paraben; restricted in the EU."},
+  "isopropylparaben":{r:3,d:"Paraben; restricted in the EU."},
+  "triclosan":{r:3,d:"Antibacterial; endocrine and resistance concerns."},
+  "benzophenone-3":{r:3,d:"UV filter (oxybenzone); endocrine disruptor, high absorption."},
+  "benzophenone-1":{r:3,d:"UV filter; endocrine concerns."},
+  "methylisothiazolinone":{r:3,d:"Preservative; potent skin sensitiser."},
+  "methylchloroisothiazolinone":{r:3,d:"Preservative; potent skin sensitiser."},
+  "butylphenyl methylpropional":{r:3,d:"Fragrance (Lilial) — banned in EU cosmetics since 2022."},
+  "bha":{r:3,d:"Antioxidant; possible carcinogen and endocrine disruptor."},
+  "butylated hydroxyanisole":{r:3,d:"Antioxidant; possible carcinogen."},
+  "p-phenylenediamine":{r:3,d:"Hair dye; strong sensitiser."},
+  "resorcinol":{r:3,d:"Hair dye ingredient; thyroid and irritation concerns."},
+  "toluene":{r:3,d:"Solvent; developmental toxicity concerns."},
+  "homosalate":{r:3,d:"UV filter; endocrine concerns, EU limits tightened."},
+  "coal tar":{r:3,d:"Colourant; carcinogenicity concerns."},
+  "hydroquinone":{r:3,d:"Skin lightener; restricted in many countries."},
+  // ---- moderate concern ----
+  "parfum":{r:2,d:"Undisclosed fragrance blend; common allergen."},
+  "fragrance":{r:2,d:"Undisclosed fragrance blend; common allergen."},
+  "methylparaben":{r:2,d:"Paraben preservative; mild endocrine concern."},
+  "ethylparaben":{r:2,d:"Paraben preservative; mild endocrine concern."},
+  "phenoxyethanol":{r:2,d:"Preservative; irritation concerns, restricted for babies."},
+  "sodium lauryl sulfate":{r:2,d:"Strong detergent; commonly irritating."},
+  "ammonium lauryl sulfate":{r:2,d:"Detergent; can irritate skin."},
+  "bht":{r:2,d:"Antioxidant; some endocrine questions."},
+  "butylated hydroxytoluene":{r:2,d:"Antioxidant; some endocrine questions."},
+  "ethylhexyl methoxycinnamate":{r:2,d:"UV filter (octinoxate); endocrine concerns."},
+  "octocrylene":{r:2,d:"UV filter; degrades into benzophenone over time."},
+  "cyclopentasiloxane":{r:2,d:"Silicone (D5); environmental persistence, EU restricted."},
+  "cyclotetrasiloxane":{r:2,d:"Silicone (D4); reproductive toxicity concerns."},
+  "retinyl palmitate":{r:2,d:"Vitamin A ester; caution in sun exposure and pregnancy."},
+  "retinol":{r:2,d:"Vitamin A; effective but irritating, avoid in pregnancy."},
+  "talc":{r:2,d:"Mineral powder; purity and inhalation concerns."},
+  "triethanolamine":{r:2,d:"pH adjuster; nitrosamine formation concern."},
+  "peg-100 stearate":{r:2,d:"PEG compound; possible contamination concerns."},
+  "peg-40 hydrogenated castor oil":{r:2,d:"PEG compound; possible contamination concerns."},
+  "polyethylene":{r:2,d:"Plastic; microplastic pollution concern."},
+  "aluminium chlorohydrate":{r:2,d:"Antiperspirant salt; debated safety."},
+  "aluminum chlorohydrate":{r:2,d:"Antiperspirant salt; debated safety."},
+  "ci 19140":{r:2,d:"Synthetic colour (tartrazine)."},
+  "ci 16035":{r:2,d:"Synthetic colour (Allura Red)."},
+  // ---- low concern ----
+  "sodium laureth sulfate":{r:1,d:"Milder detergent; can still irritate."},
+  "cocamidopropyl betaine":{r:1,d:"Mild surfactant; occasional allergen."},
+  "limonene":{r:1,d:"Fragrance allergen; must be declared in the EU."},
+  "linalool":{r:1,d:"Fragrance allergen; must be declared in the EU."},
+  "citronellol":{r:1,d:"Fragrance allergen."},
+  "geraniol":{r:1,d:"Fragrance allergen."},
+  "coumarin":{r:1,d:"Fragrance allergen."},
+  "eugenol":{r:1,d:"Fragrance allergen."},
+  "benzyl alcohol":{r:1,d:"Preservative and solvent; mild allergen."},
+  "benzyl salicylate":{r:1,d:"Fragrance allergen."},
+  "hexyl cinnamal":{r:1,d:"Fragrance allergen."},
+  "alcohol denat":{r:1,d:"Drying alcohol; can irritate sensitive skin."},
+  "sodium benzoate":{r:1,d:"Preservative; low concern in cosmetics."},
+  "potassium sorbate":{r:1,d:"Preservative; low concern."},
+  "phenethyl alcohol":{r:1,d:"Preservative/fragrance; mild."},
+  "citric acid":{r:1,d:"pH adjuster; mild at low levels."},
+  "dimethicone":{r:1,d:"Silicone; safe on skin, environmental debate."},
+  "propylene glycol":{r:1,d:"Humectant; occasional irritant."},
+  "titanium dioxide":{r:1,d:"Mineral UV filter; concern only in loose powders."},
+  "zinc oxide":{r:1,d:"Mineral UV filter; well tolerated."},
+  // ---- no known risk ----
+  "aqua":{r:0,d:"Water."}, "water":{r:0,d:"Water."},
+  "glycerin":{r:0,d:"Humectant; well tolerated."},
+  "glycerine":{r:0,d:"Humectant; well tolerated."},
+  "tocopherol":{r:0,d:"Vitamin E antioxidant."},
+  "tocopheryl acetate":{r:0,d:"Vitamin E derivative."},
+  "panthenol":{r:0,d:"Provitamin B5; soothing."},
+  "niacinamide":{r:0,d:"Vitamin B3; well tolerated."},
+  "sodium hyaluronate":{r:0,d:"Hydrating hyaluronic acid."},
+  "hyaluronic acid":{r:0,d:"Hydrating humectant."},
+  "butyrospermum parkii butter":{r:0,d:"Shea butter."},
+  "aloe barbadensis leaf juice":{r:0,d:"Aloe vera."},
+  "squalane":{r:0,d:"Emollient; well tolerated."},
+  "ceramide np":{r:0,d:"Skin-barrier lipid."},
+  "allantoin":{r:0,d:"Soothing agent."},
+  "xanthan gum":{r:0,d:"Natural thickener."},
+  "cetearyl alcohol":{r:0,d:"Fatty alcohol emollient (not drying)."},
+  "stearic acid":{r:0,d:"Fatty acid emollient."},
+  "glyceryl stearate":{r:0,d:"Emulsifier."},
+  "sodium chloride":{r:0,d:"Salt; thickener."},
+  "helianthus annuus seed oil":{r:0,d:"Sunflower oil."},
+  "simmondsia chinensis seed oil":{r:0,d:"Jojoba oil."},
+  "cocos nucifera oil":{r:0,d:"Coconut oil."},
+  "urea":{r:0,d:"Humectant; skin softener."},
+  "lactic acid":{r:0,d:"Exfoliating acid; mild at low levels."}
+};
+// alias → canonical key
+const INCI_ALIAS = {
+  "sls":"sodium lauryl sulfate","sles":"sodium laureth sulfate",
+  "oxybenzone":"benzophenone-3","octinoxate":"ethylhexyl methoxycinnamate",
+  "lilial":"butylphenyl methylpropional","d5":"cyclopentasiloxane","d4":"cyclotetrasiloxane",
+  "mit":"methylisothiazolinone","cmit":"methylchloroisothiazolinone",
+  "vitamin e":"tocopherol","shea butter":"butyrospermum parkii butter",
+  "alcohol denatured":"alcohol denat","sd alcohol":"alcohol denat",
+  "ppd":"p-phenylenediamine","aluminium chloride":"aluminium chlorohydrate"
+};
+function normIng(s){
+  return (s||"").toLowerCase()
+    .replace(/^[\s\-–•*]+/,"").replace(/[.;:]+$/,"")
+    .replace(/\(.*?\)/g,"")
+    .replace(/\*+/g,"")
+    .replace(/\s+/g," ")
+    .trim();
+}
+function lookupIng(name){
+  const n=normIng(name);
+  if(!n) return null;
+  const key = INCI_ALIAS[n] || n;
+  if(INCI[key]) return {key, name:n, ...INCI[key]};
+  // tolerate small variations: "parfum/fragrance", trailing qualifiers
+  const alt = n.replace(/\/.*$/,"").trim();
+  if(INCI[alt]) return {key:alt, name:n, ...INCI[alt]};
+  return null;
+}
+
+const COS_PANTRY = [
+  {code:"3600541354074", name:"Anti-dandruff shampoo", brand:"Elvive", kind:"cosmetic",
+   ing:["Aqua","Sodium Laureth Sulfate","Cocamidopropyl Betaine","Parfum","Sodium Chloride","Methylisothiazolinone","Limonene","Citric Acid"]},
+  {code:"3574661427157", name:"Baby moisturising lotion", brand:"Johnson's", kind:"cosmetic",
+   ing:["Aqua","Glycerin","Phenoxyethanol","Parfum","Cetearyl Alcohol","Tocopheryl Acetate","Citric Acid"]},
+  {code:"5000167235159", name:"Fragrance-free face cream", brand:"Simple", kind:"cosmetic",
+   ing:["Aqua","Glycerin","Panthenol","Niacinamide","Sodium Hyaluronate","Glyceryl Stearate","Allantoin","Xanthan Gum"]},
+  {code:"3600523500857", name:"Sun lotion SPF 30", brand:"Ambre Solaire", kind:"cosmetic",
+   ing:["Aqua","Homosalate","Ethylhexyl Methoxycinnamate","Octocrylene","Butylphenyl Methylpropional","Parfum","Tocopherol"]},
+  {code:"8710447373637", name:"Antiperspirant deodorant", brand:"Dove", kind:"cosmetic",
+   ing:["Aluminium Chlorohydrate","Cyclopentasiloxane","Parfum","Dimethicone","BHT","Limonene","Linalool"]}
+];
+COS_PANTRY.forEach(p=>p.kind="cosmetic");
+
+function scoreCosmetic(p){
+  const list=(p.ing||[]);
+  const rated=[], unknown=[];
+  list.forEach(raw=>{
+    const hit=lookupIng(raw);
+    if(hit) rated.push(hit); else unknown.push(normIng(raw));
+  });
+  const counts=[0,0,0,0];
+  rated.forEach(r=>counts[r.r]++);
+  const worst = rated.reduce((m,r)=>Math.max(m,r.r), 0);
+  // Yuka-style: the riskiest ingredient sets the ceiling, extras drag it down
+  const base=[100,78,48,15][worst];
+  const extraRisky = Math.max(0, counts[3]+counts[2] - 1);
+  const total = Math.max(0, Math.min(100, Math.round(base - extraRisky*4 - counts[1]*1.5)));
+  // an unrecognised ingredient isn't a safe one — say so rather than scoring a false 100
+  const unrated = list.length>0 && rated.length===0;
+  const lowConfidence = unrated || (unknown.length > rated.length);
+  return {total, rated, unknown, counts, worst, noData:list.length===0, unrated, lowConfidence};
+}
 const FILTERS = [
   {key:"palm",       label:"Palm oil free",  short:"palm oil",   test:p=>p.diet&&p.diet.palm===true},
   {key:"gluten",     label:"Gluten free",    short:"gluten",     test:p=>p.diet&&p.diet.gluten===true},
@@ -616,6 +876,33 @@ function checkFilters(p, active){
   return {hits, unknown};
 }
 
+/* ---------- cosmetic filters ---------- */
+const CFILTERS = [
+  {key:"fragrance", label:"Fragrance free", short:"fragrance", re:/^(parfum|fragrance)$|fragrance/},
+  {key:"paraben",   label:"Paraben free",   short:"parabens",  re:/paraben/},
+  {key:"sulfate",   label:"Sulfate free",   short:"sulfates",  re:/lauryl sulfate|laureth sulfate/},
+  {key:"silicone",  label:"Silicone free",  short:"silicones", re:/silox|dimethicone|silicone/},
+  {key:"alcohol",   label:"Alcohol free",   short:"drying alcohol", re:/^alcohol denat|^sd alcohol/},
+  {key:"allergen",  label:"No fragrance allergens", short:"fragrance allergens", re:/^(limonene|linalool|citronellol|geraniol|coumarin|eugenol|benzyl salicylate|hexyl cinnamal)$/}
+];
+function checkCosFilters(p, active){
+  const hits=[];
+  const list=(p.ing||[]).map(normIng);
+  CFILTERS.forEach(f=>{
+    if(!active.includes(f.key))return;
+    if(list.some(i=>f.re.test(i))) hits.push(f);
+  });
+  return hits;
+}
+function renderCosFilterBanner(p, s){
+  const active=loadCFilters();
+  if(!active.length) return "";
+  if(s.noData) return `<div class="fbanner warn"><span class="fico">?</span><div><b>Can't check your filters</b><span>This product has no ingredient list on Open Beauty Facts.</span></div></div>`;
+  const hits=checkCosFilters(p, active);
+  if(hits.length) return `<div class="fbanner bad"><span class="fico">!</span><div><b>Contains ${hits.map(h=>h.short).join(", ")}</b><span>Clashes with ${hits.length===1?"a preference":"preferences"} you've set on the home screen.</span></div></div>`;
+  return `<div class="fbanner ok"><span class="fico">✓</span><div><b>Clears your filters</b><span>Nothing you avoid was found in the ingredient list.</span></div></div>`;
+}
+
 /* ============================================================
    OPEN FOOD FACTS lookup (live) with graceful fallback
    ============================================================ */
@@ -626,7 +913,7 @@ async function fetchWithTimeout(url, ms){
   finally{ clearTimeout(id); }
 }
 async function fetchOFF(code){
-  const url = `https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments,additives_tags,labels_tags,categories_tags,ingredients_analysis_tags,allergens_tags,ingredients_from_palm_oil_n`;
+  const url = `https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,quantity,serving_size,nutriments,additives_tags,labels_tags,categories_tags,ingredients_analysis_tags,allergens_tags,traces_tags,ingredients_text,nova_group,ecoscore_grade,nutriscore_grade,ingredients_from_palm_oil_n`;
   let res;
   try{ res = await fetchWithTimeout(url, 9000); }
   catch(e){ throw new Error("offline"); }               // no connection / aborted
@@ -661,14 +948,54 @@ async function fetchOFF(code){
     brand: (pr.brands||"").split(",")[0].trim() || "—",
     cat: (pr.categories_tags||[]).slice(-1)[0]?.replace(/^en:/,"") || "",
     organic, diet,
+    quantity: pr.quantity||"", serving: pr.serving_size||"",
+    nova: pr.nova_group||null,
+    eco: pr.ecoscore_grade||null,
+    ingredientsText: pr.ingredients_text||"",
+    allergens: (pr.allergens_tags||[]).map(t=>t.replace(/^[a-z]{2}:/,"")),
+    traces: (pr.traces_tags||[]).map(t=>t.replace(/^[a-z]{2}:/,"")),
     add: add.filter(c=>ADDITIVES[c]),      // keep ones we can describe
     rawAdd: add,
     n:{
       energy_kj: nm["energy-kj_100g"] || (nm["energy-kcal_100g"]?nm["energy-kcal_100g"]*4.184:0) || 0,
+      kcal: nm["energy-kcal_100g"] || (nm["energy-kj_100g"]?nm["energy-kj_100g"]/4.184:0) || 0,
+      fat: nm.fat_100g!=null?nm.fat_100g:null,
+      carbs: nm.carbohydrates_100g!=null?nm.carbohydrates_100g:null,
+      salt: nm.salt_100g!=null?nm.salt_100g:(nm.sodium_100g!=null?nm.sodium_100g*2.5:null),
       sugars: nm.sugars_100g||0, sat_fat: nm["saturated-fat_100g"]||0,
       sodium, fiber: nm.fiber_100g||0, proteins: nm.proteins_100g||0,
       fruit: nm["fruits-vegetables-nuts-estimate-from-ingredients_100g"] || nm["fruits-vegetables-nuts_100g"] || 0
     }
+  };
+}
+
+/* ---------- Open Beauty Facts (cosmetics) ---------- */
+async function fetchOBF(code){
+  const url = `https://world.openbeautyfacts.org/api/v2/product/${code}.json?fields=product_name,brands,ingredients_text,ingredients,labels_tags,categories_tags`;
+  let res;
+  try{ res = await fetchWithTimeout(url, 9000); }
+  catch(e){ throw new Error("offline"); }
+  if(res.status===404) throw new Error("notfound");
+  if(!res.ok) throw new Error("server");
+  let j;
+  try{ j = await res.json(); }
+  catch(e){ throw new Error("server"); }
+  if(!j || j.status===0 || !j.product) throw new Error("notfound");
+  const pr=j.product;
+  // prefer the structured list, fall back to splitting the raw text
+  let ing=[];
+  if(Array.isArray(pr.ingredients) && pr.ingredients.length){
+    ing = pr.ingredients.map(i=>(i.text||i.id||"").replace(/^en:/,""));
+  } else if(pr.ingredients_text){
+    ing = pr.ingredients_text.split(/[,\n]+/);
+  }
+  ing = ing.map(s=>normIng(s)).filter(Boolean);
+  return {
+    code, kind:"cosmetic",
+    name: pr.product_name || "Unnamed product",
+    brand: (pr.brands||"").split(",")[0].trim() || "—",
+    labels: pr.labels_tags||[],
+    ing
   };
 }
 
@@ -778,6 +1105,10 @@ function renderProduct(p){
         <p class="why">${whyText(p,s,v)}</p>
       </div>
 
+      ${renderNutrition(p)}
+      ${renderProcessing(p)}
+      ${renderIngredients(p)}
+
       ${alt ? renderAlt(alt) : ""}
     </div>`;
 
@@ -789,6 +1120,166 @@ function renderProduct(p){
     animateCount(body.querySelector(".num b"), s.total);
   });
 }
+
+/* ---------- detail sections (food) ---------- */
+function fmt(v, unit, dp){
+  if(v==null || isNaN(v)) return "—";
+  const n = dp!=null ? Number(v).toFixed(dp) : (v>=10 ? Math.round(v) : Number(v).toFixed(1));
+  return `${n}${unit||""}`;
+}
+function renderNutrition(p){
+  const n=p.n, drink=isDrink(p), band=drink?FSA.drink:FSA.solid;
+  if(!n.kcal && n.fat==null && !n.sugars && !n.proteins) return "";
+  const rows=[
+    {name:"Energy", val:`${fmt(n.kcal,"",0)} kcal`, sub:`${fmt(n.energy_kj,"",0)} kJ`, tl:null},
+    {name:"Fat", val:fmt(n.fat,"g"), tl:light(n.fat, band.fat)},
+    {name:"of which saturates", val:fmt(n.sat_fat,"g"), tl:light(n.sat_fat, band.sat), indent:true},
+    {name:"Carbohydrate", val:fmt(n.carbs,"g"), tl:null},
+    {name:"of which sugars", val:fmt(n.sugars,"g"), tl:light(n.sugars, band.sugars), indent:true},
+    {name:"Fibre", val:fmt(n.fiber,"g"), tl:null},
+    {name:"Protein", val:fmt(n.proteins,"g"), tl:null},
+    {name:"Salt", val:fmt(n.salt,"g",2), tl:light(n.salt, band.salt)}
+  ];
+  const body=rows.map(r=>`
+    <div class="nrow${r.indent?" ind":""}">
+      <div class="nname">${r.name}</div>
+      <div class="nval">${r.val}${r.sub?`<small>${r.sub}</small>`:""}</div>
+      <div class="ntl">${r.tl?`<span class="tl" style="background:${r.tl.color}">${r.tl.label}</span>`:""}</div>
+    </div>`).join("");
+  return `<div class="section">
+    <h3>Nutrition per 100 ${drink?"ml":"g"}</h3>
+    ${body}
+    <p class="nfoot">Colours follow the UK front-of-pack guide: green is low, amber medium, red high.${p.serving?` Pack serving: ${escapeHtml(p.serving)}.`:""}</p>
+  </div>`;
+}
+function renderProcessing(p){
+  if(!p.nova || !NOVA[p.nova]) return "";
+  const g=p.nova, info=NOVA[g];
+  const color = g===4?"var(--bad)":g===3?"var(--poor)":"var(--exc)";
+  const pips=[1,2,3,4].map(i=>`<span class="pip" style="background:${i<=g?color:"var(--hair)"}"></span>`).join("");
+  return `<div class="section">
+    <h3>Processing level</h3>
+    <div class="novarow">
+      <div class="novabadge" style="background:${color}">NOVA ${g}</div>
+      <div><div class="novat">${info.t}</div><div class="novad">${info.d}</div></div>
+    </div>
+    <div class="pips">${pips}</div>
+  </div>`;
+}
+function renderIngredients(p){
+  const has = (p.ingredientsText||"").trim().length>0;
+  const alg = (p.allergens||[]).filter(Boolean);
+  const tr  = (p.traces||[]).filter(Boolean);
+  if(!has && !alg.length) return "";
+  return `<div class="section">
+    <h3>Ingredients</h3>
+    ${has?`<p class="why" style="font-size:12.8px">${escapeHtml(p.ingredientsText)}</p>`:`<p class="why" style="color:var(--mono)">No ingredient list recorded for this product.</p>`}
+    ${alg.length?`<div class="alrow"><span class="allbl">Contains</span>${alg.map(a=>`<span class="altag">${escapeHtml(titleCase(a.replace(/-/g," ")))}</span>`).join("")}</div>`:""}
+    ${tr.length?`<div class="alrow"><span class="allbl">May contain</span>${tr.map(a=>`<span class="altag soft">${escapeHtml(titleCase(a.replace(/-/g," ")))}</span>`).join("")}</div>`:""}
+  </div>`;
+}
+
+function renderCosmetic(p){
+  const s = scoreCosmetic(p);
+  const v = verdict(s.total);
+  const scoreable = !(s.noData || s.unrated);
+  if(scoreable){
+    addHistory({code:p.code, name:p.name, brand:p.brand, score:s.total, color:v.color, t:Date.now(), kind:"cosmetic"});
+    if(s.total<50) addSwap({code:p.code, name:p.name, brand:p.brand, score:s.total, color:v.color, t:Date.now(), kind:"cosmetic"});
+  }
+
+  const circ = 2*Math.PI*50;
+  const off = circ*(1 - s.total/100);
+  const banner = renderCosFilterBanner(p, s);
+
+  // ingredients, riskiest first, then original order
+  const sorted = s.rated.slice().sort((a,b)=>b.r-a.r);
+  const risky = sorted.filter(r=>r.r>0);
+  const safe  = sorted.filter(r=>r.r===0);
+
+  const row = r=>`<div class="add"><span class="rdot" style="background:${RISK[r.r].color}"></span>
+      <div class="body"><div class="an">${escapeHtml(titleCase(r.name))}</div><div class="ad">${r.d}</div></div>
+      <div class="risk" style="color:${RISK[r.r].color}">${RISK[r.r].label}</div></div>`;
+
+  const riskyRows = risky.length ? risky.map(row).join("")
+    : `<div class="clean"><span class="dot"></span> Nothing of concern found in the listed ingredients.</div>`;
+
+  body.innerHTML = `
+    <div style="--v:${v.color}">
+      <div class="phead">
+        <p class="pbrand">${escapeHtml(p.brand)} · cosmetic</p>
+        <h2>${escapeHtml(p.name)}</h2>
+        <div class="barcode">${p.code}</div>
+      </div>
+
+      ${banner}
+
+      <div class="gauge">
+        <div class="dial">
+          <svg width="112" height="112" viewBox="0 0 112 112">
+            <circle class="track" cx="56" cy="56" r="50" stroke-width="9"/>
+            <circle class="fill" cx="56" cy="56" r="50" stroke-width="9"
+              stroke-dasharray="${circ}" stroke-dashoffset="${circ}" data-off="${off}"/>
+          </svg>
+          <div class="num"><b data-count="${s.total}">${(s.noData||s.unrated)?"?":"0"}</b><small>/ 100</small></div>
+        </div>
+        <div class="verdict">
+          <div class="word">${(s.noData||s.unrated)?"—":v.word}</div>
+          <div class="sub">${s.noData?"No ingredient list available for this product.":(s.unrated?"Ingredients couldn't be matched to the risk database.":cosSub(s))}</div>
+        </div>
+      </div>
+
+      ${s.noData || s.unrated ? `<div class="section"><p class="datanote" style="margin:0">⚠ ${s.noData
+          ? "Open Beauty Facts has no ingredient list for this item, so it can't be scored. You can add the ingredients on their site to fix it for everyone."
+          : "None of this product's ingredients are in the risk database yet, so this score isn't meaningful — check the full list below yourself."}</p></div>
+        ${s.unrated?`<div class="section"><h3>Full ingredient list</h3><p class="why" style="font-size:12.5px">${p.ing.map(i=>escapeHtml(titleCase(i))).join(", ")}</p></div>`:""}` : `
+      <div class="section">
+        <h3>Ingredient risk profile</h3>
+        ${cosBar("High risk", s.counts[3], RISK[3].color, s.rated.length)}
+        ${cosBar("Moderate", s.counts[2], RISK[2].color, s.rated.length)}
+        ${cosBar("Low risk", s.counts[1], RISK[1].color, s.rated.length)}
+        ${cosBar("No risk", s.counts[0], RISK[0].color, s.rated.length)}
+        ${s.unknown.length?`<p class="datanote" style="margin-top:14px">${s.unknown.length} ingredient${s.unknown.length>1?"s aren't":" isn't"} in the risk database yet, so ${s.unknown.length>1?"they weren't":"it wasn't"} scored.</p>`:""}
+      </div>
+
+      <div class="section">
+        <h3>Worth knowing</h3>
+        ${riskyRows}
+      </div>
+
+      ${safe.length?`<div class="section">
+        <h3>Rated safe (${safe.length})</h3>
+        <p class="why">${safe.map(r=>escapeHtml(titleCase(r.name))).join(" · ")}</p>
+      </div>`:""}
+
+      <div class="section">
+        <h3>Full ingredient list</h3>
+        <p class="why" style="font-size:12.5px">${p.ing.map(i=>escapeHtml(titleCase(i))).join(", ")}</p>
+      </div>`}
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    if(s.noData||s.unrated) return;                 // leave the dial empty and showing "?"
+    const fill=body.querySelector(".fill");
+    if(fill) fill.style.strokeDashoffset = fill.dataset.off;
+    body.querySelectorAll(".track2 i").forEach(el=>{el.style.width=el.dataset.w+"%";});
+    animateCount(body.querySelector(".num b"), s.total);
+  });
+}
+function cosBar(label,count,color,total){
+  const pct = total? Math.round(count/total*100) : 0;
+  return `<div class="bar">
+    <div class="top"><div class="name">${label}<em>${count} of ${total}</em></div><div class="val" style="color:${count?color:'var(--mono)'}">${count}</div></div>
+    <div class="track2"><i data-w="${pct}" style="background:${count?color:'var(--hair)'}"></i></div>
+  </div>`;
+}
+function cosSub(s){
+  if(s.counts[3]) return "Contains an ingredient with serious safety concerns.";
+  if(s.counts[2]) return "A few ingredients here are worth a second look.";
+  if(s.counts[1]) return "Only minor irritants or fragrance allergens.";
+  return "Nothing of concern in the listed ingredients.";
+}
+function titleCase(s){ return (s||"").replace(/\b[a-z]/g,c=>c.toUpperCase()); }
 
 function breakBar(name,meta,val,color,weight){
   return `<div class="bar">
@@ -857,41 +1348,84 @@ function escapeHtml(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
    FLOW
    ============================================================ */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function lookup(code){
-  code=(code||"").replace(/\D/g,"");
-  if(!code){return;}
-  loading();
-  // try the built-in pantry first (instant, always works)
-  const local = PANTRY.find(p=>p.code===code);
-  if(local){ setTimeout(()=>renderProduct(local),260); return; }
-  // otherwise go live to Open Food Facts, with one automatic retry on a server/offline blip
+function renderAny(p){ (p.kind==="cosmetic") ? renderCosmetic(p) : renderProduct(p); }
+
+async function tryFetch(code, kind){
   let lastKind="server";
   for(let attempt=0; attempt<2; attempt++){
-    let product;
     try{
-      product = await fetchOFF(code);      // network + parsing only
+      return {ok:true, product: kind==="cosmetic" ? await fetchOBF(code) : await fetchOFF(code)};
     }catch(err){
       lastKind = err.message||"server";
-      if(lastKind==="notfound"){ notFound(code); return; }
-      if(attempt===0){ await sleep(700); continue; }   // retry once
-      break;
+      if(lastKind==="notfound") return {ok:false, kind:"notfound"};
+      if(attempt===0){ await sleep(700); continue; }
     }
-    renderProduct(product);                // rendering errors won't be misread as "no connection"
-    return;
   }
-  lookupError(lastKind, code);
+  return {ok:false, kind:lastKind};
 }
 
-// chips
+async function lookup(code, forceKind){
+  code=(code||"").replace(/\D/g,"");
+  if(!code){return;}
+  const kind = forceKind || MODE;
+  loading();
+  // built-in samples first (instant, always work offline)
+  const localF = PANTRY.find(p=>p.code===code);
+  const localC = COS_PANTRY.find(p=>p.code===code);
+  const local = kind==="cosmetic" ? (localC||localF) : (localF||localC);
+  if(local){ setTimeout(()=>renderAny(local),260); return; }
+
+  let r = await tryFetch(code, kind);
+  if(r.ok){ renderAny(r.product); return; }
+
+  // not in the chosen database? try the other one before giving up —
+  // easy to scan a shampoo while still in Food mode
+  if(r.kind==="notfound"){
+    const other = kind==="cosmetic" ? "food" : "cosmetic";
+    const r2 = await tryFetch(code, other);
+    if(r2.ok){ renderAny(r2.product); return; }
+    notFound(code); return;
+  }
+  lookupError(r.kind, code);
+}
+
+/* ---------- mode (food / cosmetics) ---------- */
+const MKEY="verdict_mode_v1";
+function loadMode(){ try{ return localStorage.getItem(MKEY)==="cosmetic" ? "cosmetic" : "food"; }catch(e){ return "food"; } }
+function saveMode(m){ try{ localStorage.setItem(MKEY,m); }catch(e){} }
+let MODE = loadMode();
+
 const chips=$("#chips");
-PANTRY.forEach(p=>{
-  const s=scoreProduct(p).total, v=verdict(s);
-  const b=document.createElement("button");
-  b.className="chip"; b.type="button";
-  b.innerHTML=`<span class="dot" style="background:${v.color}"></span>${escapeHtml(p.name)}`;
-  b.onclick=()=>lookup(p.code);
-  chips.appendChild(b);
-});
+function renderChips(){
+  const list = MODE==="cosmetic" ? COS_PANTRY : PANTRY;
+  chips.innerHTML="";
+  list.forEach(p=>{
+    const s = MODE==="cosmetic" ? scoreCosmetic(p).total : scoreProduct(p).total;
+    const v = verdict(s);
+    const b=document.createElement("button");
+    b.className="chip"; b.type="button";
+    b.innerHTML=`<span class="dot" style="background:${v.color}"></span>${escapeHtml(p.name)}`;
+    b.onclick=()=>lookup(p.code, MODE);
+    chips.appendChild(b);
+  });
+}
+function applyMode(){
+  $("#modeFood").setAttribute("aria-selected", MODE==="food" ? "true":"false");
+  $("#modeCos").setAttribute("aria-selected", MODE==="cosmetic" ? "true":"false");
+  const cos = MODE==="cosmetic";
+  $("#scanTitle").textContent = cos ? "Read the ingredient list." : "Read the back of the box.";
+  $("#scanIntro").textContent = cos
+    ? "Scan any cosmetic and Verdict rates every ingredient for risk — allergens, irritants, endocrine disruptors — and scores the product 0–100."
+    : "Point your camera at a barcode, or type it in. Verdict scores the product 0–100 on nutrition, additives, and organic — and tells you why.";
+  $("#samplesLbl").textContent = cos ? "Or try one from the bathroom shelf" : "Or try one from the pantry";
+  $("#filtersLbl").innerHTML = cos
+    ? `Things I avoid <span class="lblnote">— checked against every ingredient list</span>`
+    : `Things I avoid <span class="lblnote">— every scan gets checked against these</span>`;
+  renderChips();
+  renderFilterChips();
+}
+$("#modeFood").onclick=()=>{ MODE="food"; saveMode(MODE); applyMode(); };
+$("#modeCos").onclick=()=>{ MODE="cosmetic"; saveMode(MODE); applyMode(); };
 
 $("#lookupBtn").onclick=()=>lookup($("#codeInput").value);
 $("#codeInput").addEventListener("keydown",e=>{if(e.key==="Enter")lookup(e.target.value);});
@@ -921,38 +1455,43 @@ function renderHistory(){
   if(!list.length){wrap.hidden=true;return;}
   wrap.hidden=false;
   el.innerHTML=list.map(h=>`
-    <button class="histrow" data-code="${h.code}">
+    <button class="histrow" data-code="${h.code}" data-kind="${h.kind||"food"}">
       <span class="hchip" style="background:${h.color}">${h.score}</span>
       <span class="htext"><span class="hn">${escapeHtml(h.name)}</span><span class="hb">${escapeHtml(h.brand)} · ${timeAgo(h.t)}</span></span>
       <span class="arr"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
     </button>`).join("");
 }
-$("#recentList").addEventListener("click",e=>{const r=e.target.closest(".histrow");if(r)lookup(r.dataset.code);});
+$("#recentList").addEventListener("click",e=>{const r=e.target.closest(".histrow");if(r)lookup(r.dataset.code, r.dataset.kind);});
 $("#clearHist").onclick=()=>{saveHistory([]);renderHistory();};
 renderHistory();
 
-/* ---------- dietary filter preferences ---------- */
-const FKEY="verdict_filters_v1";
-let memFilters=[];
+/* ---------- filter preferences (separate sets for food and cosmetics) ---------- */
+const FKEY="verdict_filters_v1", CFKEY="verdict_cfilters_v1";
+let memFilters=[], memCFilters=[];
 function loadFilters(){ try{return JSON.parse(localStorage.getItem(FKEY)||"[]");}catch(e){return memFilters;} }
 function saveFilters(list){ memFilters=list; try{localStorage.setItem(FKEY,JSON.stringify(list));}catch(e){} }
+function loadCFilters(){ try{return JSON.parse(localStorage.getItem(CFKEY)||"[]");}catch(e){return memCFilters;} }
+function saveCFilters(list){ memCFilters=list; try{localStorage.setItem(CFKEY,JSON.stringify(list));}catch(e){} }
 function renderFilterChips(){
-  const active=loadFilters(), el=$("#filterChips");
+  const cos = MODE==="cosmetic";
+  const set = cos ? CFILTERS : FILTERS;
+  const active = cos ? loadCFilters() : loadFilters();
+  const el=$("#filterChips");
   el.innerHTML="";
-  FILTERS.forEach(f=>{
+  set.forEach(f=>{
     const b=document.createElement("button");
     b.className="fchip"; b.type="button";
     b.setAttribute("aria-pressed", active.includes(f.key) ? "true" : "false");
     b.innerHTML=`<span class="fcheck"></span>${f.label}`;
     b.onclick=()=>{
-      const cur=loadFilters();
-      saveFilters(cur.includes(f.key) ? cur.filter(k=>k!==f.key) : [...cur,f.key]);
+      const cur = cos ? loadCFilters() : loadFilters();
+      const next = cur.includes(f.key) ? cur.filter(k=>k!==f.key) : [...cur,f.key];
+      cos ? saveCFilters(next) : saveFilters(next);
       renderFilterChips();
     };
     el.appendChild(b);
   });
 }
-renderFilterChips();
 
 function renderFilterBanner(p){
   const active=loadFilters();
@@ -985,7 +1524,7 @@ function renderSwaps(){
   wrap.hidden=false;
   el.innerHTML=list.map(h=>`
     <div class="swaprow">
-      <button class="rowmain" data-code="${h.code}">
+      <button class="rowmain" data-code="${h.code}" data-kind="${h.kind||"food"}">
         <span class="hchip" style="background:${h.color}">${h.score}</span>
         <span class="htext"><span class="hn">${escapeHtml(h.name)}</span><span class="hb">${escapeHtml(h.brand)} · scored ${h.score}, worth replacing</span></span>
       </button>
@@ -996,10 +1535,11 @@ $("#swapList").addEventListener("click",e=>{
   const rm=e.target.closest("[data-rm]");
   if(rm){removeSwap(rm.dataset.rm);return;}
   const r=e.target.closest(".rowmain");
-  if(r)lookup(r.dataset.code);
+  if(r)lookup(r.dataset.code, r.dataset.kind);
 });
 $("#clearSwap").onclick=()=>{saveSwaps([]);renderSwaps();};
 renderSwaps();
+applyMode();   // sets chips, filters and copy for the saved mode
 
 /* ---------- camera scanner ---------- */
 let scanner=null, scanning=false, detector=null, rafId=null, stream=null, track=null, cams=[], camIdx=0, torchOn=false;
@@ -1027,6 +1567,8 @@ async function startScanner(){
     showCamNote("insecure"); return;
   }
   reader.classList.add("on"); scanLabel.textContent="Stop camera"; scanning=true;
+  document.body.classList.add("scanning");
+  window.scrollTo({top:0,behavior:"auto"});
   lastSeen=null; seenCount=0;
   try{
     if("BarcodeDetector" in window){
@@ -1040,19 +1582,34 @@ async function startScanner(){
   }catch(err){ handleCamError(err); }
 }
 
+/* ---------- lens preference (remembered between sessions) ---------- */
+const LKEY="verdict_lens_v1";
+function loadLensPref(){ try{return localStorage.getItem(LKEY)||null;}catch(e){return null;} }
+function saveLensPref(id){ try{ if(id) localStorage.setItem(LKEY,id); }catch(e){} }
+function lensLabel(i){
+  const label=(cams[i]&&cams[i].label||"").toLowerCase();
+  if(/ultra|0\.5/.test(label)) return "Ultra-wide lens — may not focus close";
+  return "Lens "+(i+1)+" of "+cams.length+" · fill the frame, hold steady";
+}
+
 async function startNative(){
   document.getElementById("readerFallback").style.display="none";
   document.getElementById("cam").style.display="";
   document.getElementById("scanguide").style.display="";
   document.getElementById("scanhelp").style.display="";
-  await openStream(null);                 // grant permission on the default rear camera
+  await openStream(null);                 // grant permission first (labels need it)
   try{
-    cams = await listBackCameras();       // labels are available only after permission
+    cams = await listBackCameras();
     if(cams.length){
-      camIdx = 0;
+      // Preferred lens: whatever was last chosen, else the SECOND rear camera —
+      // on most phones that's the properly-zoomed lens that focuses close up.
+      const saved = loadLensPref();
+      const savedIdx = saved ? cams.findIndex(c=>c.deviceId===saved) : -1;
+      camIdx = savedIdx >= 0 ? savedIdx : (cams.length > 1 ? 1 : 0);
       const curId = (track && track.getSettings) ? track.getSettings().deviceId : null;
-      const prefId = cams[0].deviceId;
-      if(prefId && prefId!==curId){ await openStream(prefId); }   // move off ultra-wide if needed
+      const wantId = cams[camIdx].deviceId;
+      if(wantId && wantId!==curId){ await openStream(wantId); }
+      if(cams.length>1) document.getElementById("scanhelp").textContent = lensLabel(camIdx);
     }
     document.getElementById("switchCam").hidden = !(cams.length>1);
   }catch(e){ document.getElementById("switchCam").hidden=true; }
@@ -1105,9 +1662,8 @@ async function listBackCameras(){
 document.getElementById("switchCam").onclick = async ()=>{
   if(!cams.length) return;
   camIdx = (camIdx+1) % cams.length;
-  const label = (cams[camIdx].label||"").toLowerCase();
-  const sh=document.getElementById("scanhelp");
-  sh.textContent = /ultra|wide|0\.5/.test(label) ? "Ultra-wide lens — may not focus close" : "Lens "+(camIdx+1)+" of "+cams.length+" · hold steady";
+  document.getElementById("scanhelp").textContent = lensLabel(camIdx);
+  saveLensPref(cams[camIdx].deviceId);        // this lens becomes the new default
   try{ await openStream(cams[camIdx].deviceId); }catch(e){ handleCamError(e); }
 };
 
@@ -1194,6 +1750,7 @@ function handleCamError(err){
 
 function stopScanner(){
   scanLabel.textContent="Scan a barcode"; scanning=false; reader.classList.remove("on");
+  document.body.classList.remove("scanning");
   document.getElementById("zoomCtl").hidden=true;
   document.getElementById("switchCam").hidden=true;
   const tb=document.getElementById("torchBtn"); if(tb){tb.hidden=true;tb.setAttribute("aria-pressed","false");} torchOn=false;

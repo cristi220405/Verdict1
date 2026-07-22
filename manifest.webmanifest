@@ -1,19 +1,21 @@
 {
   "id": "./",
-  "name": "Verdict — food scanner",
+  "name": "Verdict — food & cosmetics scanner",
   "short_name": "Verdict",
-  "description": "Scan a barcode and get a 0–100 health score with additive and dietary flags.",
+  "description": "Scan a barcode and get a 0–100 score with nutrition, additive, ingredient and dietary detail.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F5F6F2",
+  "background_color": "#16211B",
   "theme_color": "#16211B",
   "categories": ["health", "food", "lifestyle"],
   "icons": [
     { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "./icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
   ]
 }
