@@ -257,7 +257,8 @@
   .fbanner .fico{width:20px;height:20px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;margin-top:1px}
   .fbanner.bad{background:var(--bad-bg)} .fbanner.bad .fico{background:var(--bad)} .fbanner.bad b{color:var(--bad)}
   .fbanner.ok{background:var(--ok-bg)} .fbanner.ok .fico{background:var(--exc)} .fbanner.ok b{color:var(--exc)}
-  .fbanner.warn{background:var(--warn-bg)} .fbanner.warn .fico{background:var(--poor)} .fbanner.warn b{color:var(--poor)}
+  .fbanner.warn{background:var(--warn-bg)}
+  .fbanner.info{background:var(--paper);border:1px solid var(--hair)} .fbanner.info .fico{background:var(--ink-soft)} .fbanner.info b{color:var(--ink)} .fbanner.warn .fico{background:var(--poor)} .fbanner.warn b{color:var(--poor)}
 
   /* swap-list rows (reuse recent chrome) */
   .swaprow{display:flex;align-items:center;gap:6px;border-top:1px solid var(--hair)}
@@ -1304,6 +1305,7 @@ function renderProduct(p){
         </div>
       </div>
 
+      ${savedNote(p)}
       ${filterBanner}
 
       <div class="gauge">
@@ -1438,6 +1440,12 @@ function renderPriorities(pers, base){
     <p class="nfoot">Set what matters to you on the home screen. Nothing is hidden — every adjustment is listed above.</p>
   </div>`;
 }
+/* ---------- saved-copy notice ---------- */
+function savedNote(p){
+  if(!p._saved) return "";
+  return `<div class="fbanner info"><span class="fico">&#10003;</span><div><b>Saved copy</b><span>You're offline — showing what was stored when you last looked this up (${timeAgo(p._saved)}).</span></div></div>`;
+}
+
 /* ---------- product photos ---------- */
 function initials(name){ return (name||"?").trim().charAt(0).toUpperCase() || "?"; }
 // big photo for the result header; falls back to a lettered tile
@@ -1549,6 +1557,7 @@ function renderCosmetic(p){
         </div>
       </div>
 
+      ${savedNote(p)}
       ${banner}
 
       <div class="gauge">
@@ -1755,6 +1764,50 @@ async function tryFetch(code, kind){
   return {ok:false, kind:lastKind};
 }
 
+/* ============================================================
+   LOCAL PRODUCT CACHE
+   You don't need every product in the world offline — only the few
+   hundred you actually buy. Anything looked up once is kept, so it
+   works with no connection and returns instantly next time.
+   ============================================================ */
+const CKEY="verdict_cache_v1";
+const CACHE_MAX=400;
+let CACHE=null;
+function cacheAll(){
+  if(CACHE===null){ try{ CACHE=JSON.parse(localStorage.getItem(CKEY)||"{}"); }catch(e){ CACHE={}; } }
+  return CACHE;
+}
+function cacheCount(){ return Object.keys(cacheAll()).length; }
+function evictOldest(n){
+  const c=cacheAll();
+  Object.keys(c).sort((a,b)=>(c[a].t||0)-(c[b].t||0)).slice(0,n).forEach(k=>delete c[k]);
+}
+function persistCache(){
+  try{ localStorage.setItem(CKEY, JSON.stringify(cacheAll())); }
+  catch(e){                                   // storage full — drop the oldest quarter and retry once
+    evictOldest(Math.max(1, Math.ceil(cacheCount()*0.25)));
+    try{ localStorage.setItem(CKEY, JSON.stringify(cacheAll())); }catch(e2){}
+  }
+}
+function cacheGet(code){
+  const e=cacheAll()[code];
+  return (e && e.p) ? e : null;
+}
+function cachePut(p){
+  if(!p || !p.code) return;
+  const c=cacheAll();
+  c[p.code]={t:Date.now(), p};
+  if(Object.keys(c).length>CACHE_MAX) evictOldest(Object.keys(c).length-CACHE_MAX);
+  persistCache();
+}
+// refresh a cached product quietly, so the copy stays current without a wait
+async function backgroundRefresh(code, kind){
+  try{
+    const r = await tryFetch(code, kind);
+    if(r.ok) cachePut(r.product);
+  }catch(e){}
+}
+
 async function lookup(code, forceKind){
   code=(code||"").replace(/\D/g,"");
   if(!code){return;}
@@ -1767,15 +1820,24 @@ async function lookup(code, forceKind){
   const local = kind==="cosmetic" ? (localC||localF) : (localF||localC);
   if(local){ setTimeout(()=>showProduct(local),260); return; }
 
+  // then anything scanned before — instant, and works with no connection
+  const hit = cacheGet(code);
+  const offline = navigator.onLine===false;
+  if(hit){
+    showProduct(offline ? Object.assign({}, hit.p, {_saved:hit.t}) : hit.p);
+    if(!offline) backgroundRefresh(code, hit.p.kind==="cosmetic"?"cosmetic":"food");
+    return;
+  }
+
   let r = await tryFetch(code, kind);
-  if(r.ok){ showProduct(r.product); return; }
+  if(r.ok){ cachePut(r.product); showProduct(r.product); return; }
 
   // not in the chosen database? try the other one before giving up —
   // easy to scan a shampoo while still in Food mode
   if(r.kind==="notfound"){
     const other = kind==="cosmetic" ? "food" : "cosmetic";
     const r2 = await tryFetch(code, other);
-    if(r2.ok){ showProduct(r2.product); return; }
+    if(r2.ok){ cachePut(r2.product); showProduct(r2.product); return; }
     notFound(code); return;
   }
   lookupError(r.kind, code);
@@ -1885,6 +1947,7 @@ async function runSearch(term){
   registerScreen({t:"loading"});
   try{
     const list = await searchProducts(term, kind);
+    list.forEach(cachePut);                  // opening any of these is now instant/offline
     renderSearchResults(term, list, kind);
     replaceScreen({t:"search", term, list, kind});
   }catch(err){
@@ -2360,7 +2423,9 @@ const DATA_KEYS = ["verdict_history_v1","verdict_swaps_v1","verdict_filters_v1",
 function dataSummary(){
   const hist=loadHistory(), swaps=loadSwaps();
   const prios=loadPrios().length, filt=loadFilters().length+loadCFilters().length;
+  const saved=cacheCount();
   const bits=[`${hist.length} scan${hist.length===1?"":"s"}`];
+  if(saved) bits.push(`${saved} saved offline`);
   if(swaps.length) bits.push(`${swaps.length} to swap`);
   if(prios) bits.push(`${prios} priorit${prios===1?"y":"ies"}`);
   if(filt) bits.push(`${filt} filter${filt===1?"":"s"}`);
@@ -2369,7 +2434,7 @@ function dataSummary(){
 function refreshDataPanel(msg){
   const el=$("#dataSum"); if(el) el.textContent=dataSummary();
   const m=$("#dataMsg");
-  if(m) m.textContent = msg || "Export writes a small file you can keep or move to another phone. Restore merges it back in.";
+  if(m) m.textContent = msg || "Products you look up are saved on this phone, so re-scanning them works with no connection. Export writes a backup file you can keep or move to another phone.";
 }
 
 function exportData(){
